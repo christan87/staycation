@@ -1,6 +1,7 @@
 import { User, Property, Booking, Review } from './models';
 import { Types } from 'mongoose';
 import { GraphQLResolveInfo } from 'graphql';
+import { withCache, clearCache } from './cache/redis';
 
 // Define the context type
 interface Context {
@@ -57,39 +58,45 @@ enum BookingStatus {
 
 export const resolvers = {
   Query: {
-    properties: async (
-      _: any,
-      args: PropertyFilters,
-      context: Context
-    ) => {
-      const filter: any = {};
-      
-      if (args.location) {
-        filter.location = { $regex: args.location, $options: 'i' };
-      }
-      if (args.minPrice) {
-        filter.price = { $gte: args.minPrice };
-      }
-      if (args.maxPrice) {
-        filter.price = { ...filter.price, $lte: args.maxPrice };
-      }
-      if (args.bedrooms) {
-        filter.bedrooms = args.bedrooms;
-      }
-      if (args.maxGuests) {
-        filter.maxGuests = { $gte: args.maxGuests };
-      }
+    properties: withCache(
+      async (
+        _: any,
+        args: PropertyFilters,
+        context: Context
+      ) => {
+        const filter: any = {};
+        
+        if (args.location) {
+          filter.location = { $regex: args.location, $options: 'i' };
+        }
+        if (args.minPrice) {
+          filter.price = { $gte: args.minPrice };
+        }
+        if (args.maxPrice) {
+          filter.price = { ...filter.price, $lte: args.maxPrice };
+        }
+        if (args.bedrooms) {
+          filter.bedrooms = args.bedrooms;
+        }
+        if (args.maxGuests) {
+          filter.maxGuests = { $gte: args.maxGuests };
+        }
 
-      return await Property.find(filter).populate('host');
-    },
+        return await Property.find(filter).populate('host');
+      },
+      { duration: 1800 } // Cache for 30 minutes
+    ),
 
-    property: async (
-      _: any,
-      { id }: { id: string },
-      context: Context
-    ) => {
-      return await Property.findById(id).populate('host');
-    },
+    property: withCache(
+      async (
+        _: any,
+        { id }: { id: string },
+        context: Context
+      ) => {
+        return await Property.findById(id).populate('host');
+      },
+      { duration: 3600 } // Cache for 1 hour
+    ),
 
     user: async (
       _: any,
@@ -128,6 +135,10 @@ export const resolvers = {
         host: new Types.ObjectId(context.userId)
       });
       await property.save();
+      
+      // Clear properties cache when new property is created
+      await clearCache('properties');
+      
       return property.populate('host');
     },
 
@@ -154,6 +165,12 @@ export const resolvers = {
         { $set: input },
         { new: true }
       ).populate('host');
+
+      // Clear specific property cache and properties list cache
+      await Promise.all([
+        clearCache('property', { id }),
+        clearCache('properties')
+      ]);
       
       return updated;
     },
@@ -180,6 +197,10 @@ export const resolvers = {
       // Clean up related bookings and reviews
       await Booking.deleteMany({ property: id });
       await Review.deleteMany({ property: id });
+      
+      // Clear properties cache when property is deleted
+      await clearCache('properties');
+      
       return true;
     },
 
