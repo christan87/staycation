@@ -10,10 +10,17 @@ import dotenv from 'dotenv';                                     // Load environ
 import mongoose from 'mongoose';                                 // MongoDB ODM
 import { typeDefs } from './schema';                            // GraphQL schema
 import { resolvers } from './resolvers';                        // GraphQL resolvers
+import { authMiddleware, requiresAuth } from './middleware/auth.middleware';
+import { getToken } from 'next-auth/jwt';
+import { JWT } from 'next-auth/jwt';
+import { Request } from 'express';
 
 // Define the shape of our context (data available to all resolvers)
 interface MyContext {
-  token?: string;                                               // Will store JWT token for auth
+  token: string | null;                                               // Will store JWT token for auth
+  user: any | null;                                                   // User data
+  isAuthenticated: boolean;                                     // Whether the user is authenticated
+  req: Request;                                                     // Request object
 }
 
 // Load environment variables from .env file
@@ -31,8 +38,40 @@ const server = new ApolloServer<MyContext>({
   resolvers,                                                    // Our resolver functions
   plugins: [
     // Plugin to properly close server connections
-    ApolloServerPluginDrainHttpServer({ httpServer })
+    ApolloServerPluginDrainHttpServer({ httpServer }),
+    // Plugin to apply authentication to every request
+    {
+      async requestDidStart({ contextValue, operationName }) {
+        // Skip authentication for introspection queries
+        if (operationName === 'IntrospectionQuery') {
+          return;
+        }
+
+        // Check if operation requires authentication
+        if (requiresAuth(operationName!, contextValue)) {
+          await authMiddleware(
+            () => {},
+            null,
+            null,
+            contextValue,
+            null
+          );
+        }
+      },
+    },
   ],
+  formatError: (error) => {
+    // Log the error for debugging
+    console.error('GraphQL Error:', error);
+
+    // Return a sanitized error message to the client
+    return {
+      message: error.message,
+      extensions: {
+        code: error.extensions?.code || 'INTERNAL_SERVER_ERROR',
+      },
+    };
+  },
 });
 
 // Function to connect to MongoDB
@@ -74,10 +113,22 @@ async function startServer() {
       json(),                                                   // Parse JSON bodies
       expressMiddleware(server, {
         // Context function - runs on every request
-        context: async ({ req }) => ({
-          // Pass authorization token to resolvers
-          token: req.headers.authorization
-        }),
+        context: async ({ req }): Promise<MyContext> => {
+          // Get the token from the request
+          const token = await getToken({ req });
+          
+          // Extract the access token string or use null
+          const accessToken = typeof token?.accessToken === 'string' 
+            ? token.accessToken 
+            : null;
+          
+          return {
+            req,
+            token: accessToken,
+            user: null,
+            isAuthenticated: false,
+          };
+        },
       })
     );
 

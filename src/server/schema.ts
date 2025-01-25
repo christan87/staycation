@@ -1,67 +1,99 @@
 // This is our GraphQL schema definition using the GraphQL Schema Definition Language (SDL)
 export const typeDefs = `#graphql
+  # User type represents a user in the system
+  type User {
+    id: ID!
+    name: String!
+    email: String!
+    image: String
+    role: UserRole!
+    emailVerified: String
+    properties: [Property!]!
+    bookings: [Booking!]!
+    reviews: [Review!]!
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  # Auth response type for login/register
+  type AuthResponse {
+    user: User!
+    token: String!
+  }
+
+  # Input type for user registration
+  input RegisterInput {
+    name: String!
+    email: String!
+    password: String!
+  }
+
+  # Input type for user login
+  input LoginInput {
+    email: String!
+    password: String!
+  }
+
   # Property type represents a vacation rental property
   type Property {
-    id: ID!                    # Unique identifier for the property (! means required)
-    title: String!             # Name/title of the property
-    description: String!       # Detailed description
-    location: String!          # Property location (e.g., city, address)
-    price: Float!             # Price per night
-    bedrooms: Int!            # Number of bedrooms
-    bathrooms: Int!           # Number of bathrooms
-    maxGuests: Int!           # Maximum number of guests allowed
-    amenities: [String!]!     # List of amenities (e.g., ["WiFi", "Pool"])
-    images: [String!]!        # List of image URLs
-    host: User!               # Reference to the User who owns this property
-    bookings: [Booking!]!     # List of bookings for this property
-    reviews: [Review!]!       # List of reviews for this property
-    createdAt: String!        # Timestamp when property was created
-    updatedAt: String!        # Timestamp when property was last updated
+    id: ID!
+    title: String!
+    description: String!
+    location: String!
+    price: Float!
+    bedrooms: Int!
+    bathrooms: Int!
+    maxGuests: Int!
+    amenities: [String!]!
+    images: [String!]!
+    host: User!
+    bookings: [Booking!]!
+    reviews: [Review!]!
+    createdAt: String!
+    updatedAt: String!
   }
 
-  # User type represents a user in the system (can be either host or guest)
-  type User {
-    id: ID!                   # Unique identifier for the user
-    name: String!             # User's full name
-    email: String!            # User's email address
-    properties: [Property!]!  # List of properties owned by this user (if they're a host)
-    bookings: [Booking!]!     # List of bookings made by this user (if they're a guest)
-    reviews: [Review!]!       # List of reviews written by this user
-  }
-
-  # Booking type represents a reservation of a property
+  # Booking type represents a reservation
   type Booking {
-    id: ID!                   # Unique identifier for the booking
-    property: Property!       # Reference to the booked property
-    guest: User!             # Reference to the user who made the booking
-    checkIn: String!         # Check-in date
-    checkOut: String!        # Check-out date
-    guestCount: Int!         # Number of guests for this booking
-    totalPrice: Float!       # Total price for the stay
-    status: BookingStatus!   # Current status of the booking
-    createdAt: String!       # When the booking was created
-    updatedAt: String!       # When the booking was last updated
+    id: ID!
+    property: Property!
+    guest: User!
+    checkIn: String!
+    checkOut: String!
+    guestCount: Int!
+    totalPrice: Float!
+    status: BookingStatus!
+    createdAt: String!
+    updatedAt: String!
   }
 
-  # Review type represents a review left by a guest for a property
+  # Review type represents a review for a property
   type Review {
-    id: ID!                  # Unique identifier for the review
-    property: Property!      # Reference to the reviewed property
-    author: User!           # Reference to the user who wrote the review
-    rating: Int!            # Rating score (typically 1-5)
-    comment: String!        # Review text content
-    createdAt: String!      # When the review was created
+    id: ID!
+    property: Property!
+    author: User!
+    rating: Int!
+    comment: String!
+    createdAt: String!
+    updatedAt: String!
   }
 
-  # Enum for possible booking statuses
+  # Enum for booking status
   enum BookingStatus {
-    PENDING                 # Booking is awaiting confirmation
-    CONFIRMED              # Booking has been confirmed by the host
-    CANCELLED              # Booking has been cancelled
-    COMPLETED              # Stay has been completed
+    PENDING
+    CONFIRMED
+    CANCELLED
+    COMPLETED
   }
 
-  # Input type for creating/updating a property
+  # Enum for user roles
+  enum UserRole {
+    USER
+    HOST
+    ADMIN
+  }
+
+  # Input types for mutations
   input PropertyInput {
     title: String!
     description: String!
@@ -74,58 +106,62 @@ export const typeDefs = `#graphql
     images: [String!]!
   }
 
-  # Input type for creating a booking
   input BookingInput {
-    checkIn: String!        # Check-in date
-    checkOut: String!       # Check-out date
-    guestCount: Int!        # Number of guests
+    checkIn: String!
+    checkOut: String!
+    guestCount: Int!
   }
 
-  # Input type for creating a review
   input ReviewInput {
-    rating: Int!           # Rating score
-    comment: String!       # Review text
+    rating: Int!
+    comment: String!
   }
 
-  # Query type defines all the ways to read data
   type Query {
-    # Get all properties with optional filters
+    # Auth queries
+    me: User                           # Get current authenticated user
+    user(id: ID!): User               # Get user by ID (admin only)
+    users: [User!]!                   # Get all users (admin only)
+
+    # Property queries
+    property(id: ID!): Property
     properties(
-      location: String     # Filter by location
-      minPrice: Float     # Filter by minimum price
-      maxPrice: Float     # Filter by maximum price
-      bedrooms: Int       # Filter by minimum number of bedrooms
-      maxGuests: Int      # Filter by maximum number of guests
+      location: String
+      minPrice: Float
+      maxPrice: Float
+      bedrooms: Int
+      maxGuests: Int
     ): [Property!]!
 
-    # Get a single property by ID
-    property(id: ID!): Property
+    # Booking queries
+    booking(id: ID!): Booking
+    myBookings: [Booking!]!
+    propertyBookings(propertyId: ID!): [Booking!]!
 
-    # Get a single user by ID
-    user(id: ID!): User
-
-    # Get all bookings for a specific user
-    bookings(userId: ID!): [Booking!]!
+    # Review queries
+    review(id: ID!): Review
+    propertyReviews(propertyId: ID!): [Review!]!
   }
 
-  # Mutation type defines all the ways to create/update/delete data
   type Mutation {
-    # Create a new property
+    # Auth mutations
+    register(input: RegisterInput!): AuthResponse!
+    login(input: LoginInput!): AuthResponse!
+    updateProfile(
+      name: String
+      password: String
+    ): User!
+
+    # Property mutations
     createProperty(input: PropertyInput!): Property!
-
-    # Update an existing property
     updateProperty(id: ID!, input: PropertyInput!): Property!
-
-    # Delete a property
     deleteProperty(id: ID!): Boolean!
 
-    # Create a new booking
+    # Booking mutations
     createBooking(propertyId: ID!, input: BookingInput!): Booking!
-
-    # Update a booking's status
     updateBookingStatus(id: ID!, status: BookingStatus!): Booking!
 
-    # Create a new review
+    # Review mutations
     createReview(propertyId: ID!, input: ReviewInput!): Review!
   }
 `;
