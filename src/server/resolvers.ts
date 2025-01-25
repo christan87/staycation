@@ -27,7 +27,11 @@ export const resolvers = {
       if (!context.isAuthenticated) {
         throw new GraphQLError('Not authenticated');
       }
-      return context.user;
+      const user = await User.findById(context.user.id);
+      if (!user) {
+        throw new GraphQLError('User not found');
+      }
+      return user;
     },
 
     user: async (_: any, { id }: { id: string }, context: Context) => {
