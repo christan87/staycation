@@ -1,18 +1,45 @@
+/**
+ * User Model
+ * 
+ * This file defines the Mongoose schema and model for users in the system.
+ * It includes:
+ * - User schema definition with validation
+ * - Password hashing middleware
+ * - Methods for password comparison and role checking
+ * - TypeScript interfaces for type safety
+ */
+
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
+/**
+ * Interface defining the shape of a User document
+ */
 export interface IUser {
+  /** User's full name */
   name: string;
+  /** User's email address (unique) */
   email: string;
+  /** Hashed password (optional for OAuth users) */
   password?: string;
+  /** Profile image URL */
   image?: string;
+  /** Date when email was verified */
   emailVerified?: Date;
+  /** Authentication provider (e.g., 'google', 'github') */
   provider?: string;
+  /** User's role in the system */
   role: 'USER' | 'HOST' | 'ADMIN';
+  /** Timestamp of user creation */
   createdAt: Date;
+  /** Timestamp of last update */
   updatedAt: Date;
 }
 
+/**
+ * Mongoose schema for the User model
+ * Includes validation rules and default values
+ */
 const userSchema = new mongoose.Schema<IUser>({
   name: {
     type: String,
@@ -43,7 +70,10 @@ const userSchema = new mongoose.Schema<IUser>({
   timestamps: true,
 });
 
-// Hash password before saving
+/**
+ * Pre-save middleware to hash password before saving
+ * Only hashes the password if it has been modified
+ */
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) {
     return next();
@@ -58,7 +88,11 @@ userSchema.pre('save', async function(next) {
   }
 });
 
-// Add method to check password
+/**
+ * Method to compare a candidate password with the user's hashed password
+ * @param candidatePassword - The password to check
+ * @returns Promise resolving to true if passwords match, false otherwise
+ */
 userSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
   try {
     return await bcrypt.compare(candidatePassword, this.password);
@@ -67,9 +101,13 @@ userSchema.methods.comparePassword = async function(candidatePassword: string): 
   }
 };
 
-// Add method to check if user can host properties
+/**
+ * Method to check if user has permission to host properties
+ * @returns boolean indicating if user can host properties
+ */
 userSchema.methods.canHost = function(): boolean {
   return this.role === 'HOST' || this.role === 'ADMIN';
 };
 
+// Create or retrieve the User model
 export const User = mongoose.models.User || mongoose.model<IUser>('User', userSchema);

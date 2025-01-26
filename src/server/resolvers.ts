@@ -1,8 +1,23 @@
+/**
+ * GraphQL Resolvers
+ * 
+ * This file contains all GraphQL resolvers for the application.
+ * It handles:
+ * - User authentication (register, login)
+ * - User queries (me, user, users)
+ * - Property management (to be implemented)
+ * - Booking management (to be implemented)
+ * - Review management (to be implemented)
+ */
+
 import { User } from './models/user.model';
 import { GraphQLError } from 'graphql';
 import bcrypt from 'bcryptjs';
 import { signToken } from '../utils/auth';
 
+/**
+ * Context interface for resolver functions
+ */
 interface Context {
   user: any;
   isAuthenticated: boolean;
@@ -10,12 +25,18 @@ interface Context {
   req: any;
 }
 
+/**
+ * Input type for user registration
+ */
 interface RegisterInput {
   name: string;
   email: string;
   password: string;
 }
 
+/**
+ * Input type for user login
+ */
 interface LoginInput {
   email: string;
   password: string;
@@ -23,6 +44,10 @@ interface LoginInput {
 
 export const resolvers = {
   Query: {
+    /**
+     * Returns the currently authenticated user
+     * @throws {GraphQLError} If user is not authenticated
+     */
     me: async (_: any, __: any, context: Context) => {
       if (!context.isAuthenticated) {
         throw new GraphQLError('Not authenticated');
@@ -34,6 +59,10 @@ export const resolvers = {
       return user;
     },
 
+    /**
+     * Returns a specific user by ID (admin only)
+     * @throws {GraphQLError} If user is not authenticated or not an admin
+     */
     user: async (_: any, { id }: { id: string }, context: Context) => {
       if (!context.isAuthenticated || context.user.role !== 'ADMIN') {
         throw new GraphQLError('Not authorized');
@@ -41,6 +70,10 @@ export const resolvers = {
       return await User.findById(id);
     },
 
+    /**
+     * Returns all users (admin only)
+     * @throws {GraphQLError} If user is not authenticated or not an admin
+     */
     users: async (_: any, __: any, context: Context) => {
       if (!context.isAuthenticated || context.user.role !== 'ADMIN') {
         throw new GraphQLError('Not authorized');
@@ -81,6 +114,10 @@ export const resolvers = {
   },
 
   Mutation: {
+    /**
+     * Registers a new user
+     * @throws {GraphQLError} If user already exists or registration fails
+     */
     register: async (_: any, { input }: { input: RegisterInput }) => {
       try {
         console.log('Starting registration process for email:', input.email);
@@ -120,6 +157,10 @@ export const resolvers = {
       }
     },
 
+    /**
+     * Authenticates a user and returns a token
+     * @throws {GraphQLError} If credentials are invalid
+     */
     login: async (_: any, { input }: { input: LoginInput }) => {
       const { email, password } = input;
 
@@ -147,6 +188,10 @@ export const resolvers = {
       };
     },
 
+    /**
+     * Updates the current user's profile
+     * @throws {GraphQLError} If user is not authenticated
+     */
     updateProfile: async (_: any, 
       { name, password }: { name?: string; password?: string }, 
       context: Context
@@ -197,12 +242,21 @@ export const resolvers = {
   },
 
   User: {
+    /**
+     * Returns the properties owned by the user
+     */
     properties: async (user: any) => {
       return [];
     },
+    /**
+     * Returns the bookings made by the user
+     */
     bookings: async (user: any) => {
       return [];
     },
+    /**
+     * Returns the reviews made by the user
+     */
     reviews: async (user: any) => {
       return [];
     },

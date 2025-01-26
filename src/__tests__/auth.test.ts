@@ -1,3 +1,15 @@
+/**
+ * Authentication Test Suite
+ * 
+ * This file contains comprehensive tests for the authentication system, including:
+ * - User registration (success and failure cases)
+ * - User login (success and failure cases)
+ * - Me query (authenticated and unauthenticated cases)
+ * 
+ * Each test uses the test utilities to create test users, execute GraphQL operations,
+ * and verify the expected behavior of the authentication system.
+ */
+
 import { createTestUser, executeOperation, createTestContext } from './utils/testUtils';
 import { createTestServer } from './setup';
 import { User } from '../server/models/user.model';
@@ -13,6 +25,7 @@ describe('Authentication', () => {
   });
 
   describe('Register Mutation', () => {
+    // GraphQL mutation for user registration
     const REGISTER_MUTATION = `
       mutation Register($input: RegisterInput!) {
         register(input: $input) {
@@ -28,6 +41,7 @@ describe('Authentication', () => {
     `;
 
     it('should register a new user successfully', async () => {
+      // Test data for new user registration
       const variables = {
         input: {
           name: 'New User',
@@ -41,6 +55,7 @@ describe('Authentication', () => {
         variables,
       });
 
+      // Verify successful registration
       expect(response.errors).toBeUndefined();
       const data = response.data?.register;
       expect(data.token).toBeDefined();
@@ -57,9 +72,10 @@ describe('Authentication', () => {
     });
 
     it('should not register a user with existing email', async () => {
-      // Create a user first
+      // Create a test user first
       await createTestUser();
 
+      // Attempt to register with same email
       const variables = {
         input: {
           name: 'Another User',
@@ -73,6 +89,7 @@ describe('Authentication', () => {
         variables,
       });
 
+      // Verify registration fails with appropriate error
       expect(response.errors).toBeDefined();
       expect(response.errors?.[0].message).toBe(
         'User already exists with this email'
@@ -81,6 +98,7 @@ describe('Authentication', () => {
   });
 
   describe('Login Mutation', () => {
+    // GraphQL mutation for user login
     const LOGIN_MUTATION = `
       mutation Login($input: LoginInput!) {
         login(input: $input) {
@@ -96,8 +114,10 @@ describe('Authentication', () => {
     `;
 
     it('should login successfully with correct credentials', async () => {
+      // Create a test user
       const { user } = await createTestUser();
 
+      // Attempt login with correct credentials
       const variables = {
         input: {
           email: user.email,
@@ -110,6 +130,7 @@ describe('Authentication', () => {
         variables,
       });
 
+      // Verify successful login
       expect(response.errors).toBeUndefined();
       const data = response.data?.login;
       expect(data.token).toBeDefined();
@@ -121,8 +142,10 @@ describe('Authentication', () => {
     });
 
     it('should not login with incorrect password', async () => {
+      // Create a test user
       const { user } = await createTestUser();
 
+      // Attempt login with wrong password
       const variables = {
         input: {
           email: user.email,
@@ -135,6 +158,7 @@ describe('Authentication', () => {
         variables,
       });
 
+      // Verify login fails with appropriate error
       expect(response.errors).toBeDefined();
       expect(response.errors?.[0].message).toBe(
         'Invalid credentials'
@@ -143,6 +167,7 @@ describe('Authentication', () => {
   });
 
   describe('Me Query', () => {
+    // GraphQL query to get current user data
     const ME_QUERY = `
       query Me {
         me {
@@ -155,6 +180,7 @@ describe('Authentication', () => {
     `;
 
     it('should return user data when authenticated', async () => {
+      // Create a test user and get their token
       const { user, token } = await createTestUser();
       const context = createTestContext(token);
 
@@ -163,6 +189,7 @@ describe('Authentication', () => {
         context,
       });
 
+      // Verify successful user data retrieval
       expect(response.errors).toBeUndefined();
       const data = response.data?.me;
       expect(data).toMatchObject({
@@ -173,11 +200,13 @@ describe('Authentication', () => {
     });
 
     it('should return error when not authenticated', async () => {
+      // Attempt query without authentication
       const response = await executeOperation<MeQuery>(server, {
         query: ME_QUERY,
         context: createTestContext(),
       });
 
+      // Verify query fails with authentication error
       expect(response.errors).toBeDefined();
       expect(response.errors?.[0].message).toBe(
         'Not authenticated'
