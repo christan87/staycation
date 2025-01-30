@@ -1,0 +1,8 @@
+type Mutation {
+  uploadImage(file: Upload!): ImageUploadResponse!
+}
+
+type ImageUploadResponse {
+  url: String!
+  publicId: String!
+}

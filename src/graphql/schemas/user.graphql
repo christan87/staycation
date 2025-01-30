@@ -1,0 +1,42 @@
+type User {
+  id: ID!
+  name: String!
+  email: String!
+  image: String
+  phoneNumber: String
+  role: UserRole!
+  properties: [Property!]
+  bookings: [Booking!]
+  reviews: [Review!]
+  createdAt: String!
+  updatedAt: String!
+}
+
+enum UserRole {
+  GUEST
+  HOST
+  ADMIN
+}
+
+input UpdateUserInput {
+  name: String
+  phoneNumber: String
+  image: String
+}
+
+type UserResponse {
+  success: Boolean!
+  message: String
+  user: User
+}
+
+type Query {
+  me: User
+  user(id: ID!): User
+}
+
+type Mutation {
+  updateUser(input: UpdateUserInput!): UserResponse!
+  deleteUser: UserResponse!
+  becomeHost: UserResponse!
+}

@@ -1,0 +1,79 @@
+type Booking {
+  id: ID!
+  property: Property!
+  guest: User!
+  checkIn: String!
+  checkOut: String!
+  totalPrice: Float!
+  numberOfGuests: Int!
+  status: BookingStatus!
+  paymentStatus: PaymentStatus!
+  createdAt: String!
+  updatedAt: String!
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+}
+
+input CreateBookingInput {
+  propertyId: ID!
+  checkIn: String!
+  checkOut: String!
+  numberOfGuests: Int!
+}
+
+input UpdateBookingInput {
+  bookingId: ID!
+  checkIn: String
+  checkOut: String
+  numberOfGuests: Int
+  status: BookingStatus
+  paymentStatus: PaymentStatus
+}
+
+type BookingResponse {
+  success: Boolean!
+  message: String
+  booking: Booking
+}
+
+type Query {
+  # Get a single booking by ID
+  booking(id: ID!): Booking
+  
+  # Get all bookings for the current user (as guest)
+  myBookings: [Booking!]!
+  
+  # Get all bookings for a specific property (requires host permission)
+  propertyBookings(propertyId: ID!): [Booking!]!
+  
+  # Check if a property is available for given dates
+  checkAvailability(propertyId: ID!, checkIn: String!, checkOut: String!): Boolean!
+}
+
+type Mutation {
+  # Create a new booking
+  createBooking(input: CreateBookingInput!): BookingResponse!
+  
+  # Update an existing booking
+  updateBooking(input: UpdateBookingInput!): BookingResponse!
+  
+  # Cancel a booking
+  cancelBooking(bookingId: ID!): BookingResponse!
+  
+  # Confirm a booking (typically after payment)
+  confirmBooking(bookingId: ID!): BookingResponse!
+  
+  # Complete a booking (typically after stay)
+  completeBooking(bookingId: ID!): BookingResponse!
+}

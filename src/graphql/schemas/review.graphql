@@ -1,0 +1,38 @@
+type Review {
+  id: ID!
+  rating: Int!
+  comment: String
+  property: Property!
+  guest: User!
+  createdAt: String!
+  updatedAt: String!
+}
+
+input CreateReviewInput {
+  propertyId: ID!
+  rating: Int!
+  comment: String
+}
+
+input UpdateReviewInput {
+  reviewId: ID!
+  rating: Int
+  comment: String
+}
+
+type ReviewResponse {
+  success: Boolean!
+  message: String
+  review: Review
+}
+
+type Query {
+  propertyReviews(propertyId: ID!): [Review!]!
+  userReviews(userId: ID!): [Review!]!
+}
+
+type Mutation {
+  createReview(input: CreateReviewInput!): ReviewResponse!
+  updateReview(input: UpdateReviewInput!): ReviewResponse!
+  deleteReview(reviewId: ID!): ReviewResponse!
+}

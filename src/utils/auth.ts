@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { getSession } from 'next-auth/react';
 import { GetServerSidePropsContext } from 'next';
-import { User } from '../server/models/user.model';
+import { User } from '../models/User';
 import jwt from 'jsonwebtoken';
 
 // Verify password
@@ -52,30 +52,32 @@ export function isStrongPassword(password: string) {
 
 // Sign JWT token
 export function signToken(user: any) {
-  if (!process.env.JWT_SECRET) {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
     throw new Error('JWT_SECRET is not defined in environment variables');
   }
 
   return jwt.sign(
-    { 
+    {
       id: user._id,
       email: user.email,
-      role: user.role 
+      role: user.role
     },
-    process.env.JWT_SECRET,
-    { expiresIn: '30d' }
+    secret,
+    { expiresIn: '24h' }
   );
 }
 
 // Verify JWT token
 export function verifyToken(token: string) {
-  if (!process.env.JWT_SECRET) {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
     throw new Error('JWT_SECRET is not defined in environment variables');
   }
 
   try {
-    return jwt.verify(token, process.env.JWT_SECRET);
+    return jwt.verify(token, secret);
   } catch (error) {
-    return null;
+    throw createAuthError('Invalid or expired token');
   }
 }

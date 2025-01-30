@@ -1,0 +1,120 @@
+type Property {
+  id: ID!
+  title: String!
+  description: String!
+  location: Location!
+  price: Float!
+  images: [Image!]!
+  amenities: [String!]!
+  host: User!
+  maxGuests: Int!
+  type: PropertyType!
+  rating: Float
+  reviews: [Review!]
+  createdAt: String!
+  updatedAt: String!
+}
+
+type Location {
+  address: String!
+  city: String!
+  state: String!
+  country: String!
+  zipCode: String!
+  coordinates: Coordinates
+}
+
+type Coordinates {
+  latitude: Float!
+  longitude: Float!
+}
+
+type Image {
+  url: String!
+  publicId: String!
+}
+
+enum PropertyType {
+  HOUSE
+  APARTMENT
+  VILLA
+  CABIN
+  COTTAGE
+}
+
+type Review {
+  id: ID!
+  rating: Int!
+  comment: String
+  guest: User!
+  createdAt: String!
+}
+
+input CreatePropertyInput {
+  title: String!
+  description: String!
+  location: LocationInput!
+  price: Float!
+  images: [ImageInput!]!
+  amenities: [String!]!
+  maxGuests: Int!
+  type: PropertyType!
+}
+
+input LocationInput {
+  address: String!
+  city: String!
+  state: String!
+  country: String!
+  zipCode: String!
+  latitude: Float
+  longitude: Float
+}
+
+input ImageInput {
+  url: String!
+  publicId: String!
+}
+
+input UpdatePropertyInput {
+  id: ID!
+  title: String
+  description: String
+  location: LocationInput
+  price: Float
+  images: [ImageInput!]
+  amenities: [String!]
+  maxGuests: Int
+  type: PropertyType
+}
+
+type PropertyResponse {
+  success: Boolean!
+  message: String
+  property: Property
+}
+
+type Query {
+  property(id: ID!): Property
+  properties(
+    limit: Int
+    offset: Int
+    filter: PropertyFilterInput
+  ): [Property!]!
+  myProperties: [Property!]!
+  searchProperties(query: String!): [Property!]!
+}
+
+input PropertyFilterInput {
+  priceMin: Float
+  priceMax: Float
+  location: String
+  type: PropertyType
+  maxGuests: Int
+}
+
+type Mutation {
+  createProperty(input: CreatePropertyInput!): PropertyResponse!
+  updateProperty(input: UpdatePropertyInput!): PropertyResponse!
+  deleteProperty(id: ID!): PropertyResponse!
+}

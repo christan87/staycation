@@ -7,6 +7,8 @@ import dbConnect from '@/lib/mongodb';
 import { User } from '@/models/User';
 import bcrypt from 'bcryptjs';
 import { Session } from 'next-auth';
+import { typeDefs as imageUploadTypeDefs } from '@/graphql/schemas/schema';
+import resolvers from '@/graphql/resolvers';
 
 interface LoginInput {
   email: string;
@@ -25,7 +27,7 @@ interface Context {
   }) | null;
 }
 
-const typeDefs = `
+const baseTypeDefs = `
   type User {
     id: ID!
     name: String!
@@ -50,25 +52,20 @@ const typeDefs = `
   }
 
   type Mutation {
-    loginUser(input: LoginInput!): LoginResponse
+    loginUser(input: LoginInput!): LoginResponse!
   }
 `;
 
-const resolvers = {
+const baseResolvers = {
   Query: {
     getCurrentUser: async (_: unknown, __: unknown, context: Context) => {
       if (!context.session?.user) {
-        throw new Error('Not authenticated');
+        return null;
       }
-
-      const sessionUser = context.session.user;
-      return {
-        id: sessionUser.id,
-        name: sessionUser.name || '',
-        email: sessionUser.email || '',
-        image: sessionUser.image,
-        role: sessionUser.role || 'USER',
-      };
+      
+      await dbConnect();
+      const user = await User.findById(context.session.user.id);
+      return user;
     },
   },
   Mutation: {
@@ -80,22 +77,28 @@ const resolvers = {
         if (!user) {
           return {
             success: false,
-            message: 'Invalid email or password',
+            message: 'Invalid credentials',
           };
         }
 
-        const isValidPassword = await bcrypt.compare(input.password, user.password);
-        if (!isValidPassword) {
+        const isMatch = await bcrypt.compare(input.password, user.password);
+        if (!isMatch) {
           return {
             success: false,
-            message: 'Invalid email or password',
+            message: 'Invalid credentials',
           };
         }
+
+        await signIn('credentials', {
+          email: input.email,
+          password: input.password,
+          redirect: false,
+        });
 
         return {
           success: true,
           user: {
-            id: user._id.toString(),
+            id: user._id,
             name: user.name,
             email: user.email,
             image: user.image,
@@ -103,7 +106,6 @@ const resolvers = {
           },
         };
       } catch (error) {
-        console.error('Login error:', error);
         return {
           success: false,
           message: 'An error occurred during login',
@@ -113,15 +115,25 @@ const resolvers = {
   },
 };
 
+// Merge the base typeDefs with our image upload typeDefs
+const mergedTypeDefs = [baseTypeDefs, imageUploadTypeDefs];
+
+// Merge the base resolvers with our image upload resolvers
+const mergedResolvers = {
+  ...baseResolvers,
+  ...resolvers,
+};
+
 const schema = createSchema({
-  typeDefs,
-  resolvers,
+  typeDefs: mergedTypeDefs,
+  resolvers: mergedResolvers,
 });
 
-const handleRequest = createYoga({
+const { handleRequest } = createYoga({
   schema,
   graphqlEndpoint: '/api/graphql',
-  async context({ request }): Promise<Context> {
+  fetchAPI: { Response },
+  context: async ({ request }): Promise<Context> => {
     const session = await getServerSession(authOptions);
     return { session };
   },
