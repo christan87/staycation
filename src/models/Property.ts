@@ -122,4 +122,5 @@ propertySchema.index({ 'location.country': 1, price: 1 });
 propertySchema.index({ type: 1 });
 propertySchema.index({ host: 1 });
 
+// Export the model with existence check
 export const Property = mongoose.models.Property || mongoose.model<IProperty>('Property', propertySchema);

@@ -67,8 +67,12 @@ input LocationInput {
   state: String!
   country: String!
   zipCode: String!
-  latitude: Float
-  longitude: Float
+  coordinates: CoordinatesInput
+}
+
+input CoordinatesInput {
+  latitude: Float!
+  longitude: Float!
 }
 
 input ImageInput {
@@ -106,15 +110,15 @@ type Query {
 }
 
 input PropertyFilterInput {
-  priceMin: Float
-  priceMax: Float
-  location: String
   type: PropertyType
+  maxPrice: Float
+  minPrice: Float
+  location: String
   maxGuests: Int
 }
 
 type Mutation {
-  createProperty(input: CreatePropertyInput!): PropertyResponse!
-  updateProperty(input: UpdatePropertyInput!): PropertyResponse!
-  deleteProperty(id: ID!): PropertyResponse!
+  createProperty(input: CreatePropertyInput!): Property!
+  updateProperty(input: UpdatePropertyInput!): Property!
+  deleteProperty(id: ID!): Boolean!
 }

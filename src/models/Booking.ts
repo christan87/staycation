@@ -159,4 +159,5 @@ bookingSchema.virtual('guestDetails', {
     justOne: true
 });
 
-export const Booking = mongoose.model<IBooking, IBookingModel>('Booking', bookingSchema);
+// Export the Booking model with a check to prevent overwriting
+export const Booking = mongoose.models.Booking || mongoose.model<IBooking, IBookingModel>('Booking', bookingSchema);

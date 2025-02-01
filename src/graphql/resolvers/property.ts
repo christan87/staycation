@@ -8,7 +8,11 @@ import { User } from '@/models/User';
 export const propertyResolvers = {
   Query: {
     property: async (_: any, { id }: { id: string }) => {
-      return await Property.findById(id).populate('host');
+      const property = await Property.findById(id).populate('host');
+      if (!property) {
+        throw new GraphQLError('Property not found');
+      }
+      return property;
     },
     
     properties: async (_: any, { 
@@ -20,12 +24,30 @@ export const propertyResolvers = {
       offset?: number; 
       filter?: any;
     }) => {
-      const query = filter ? { ...filter } : {};
-      return await Property.find(query)
+      const query: any = {};
+      
+      if (filter) {
+        if (filter.type) query.type = filter.type;
+        if (filter.maxPrice) query.price = { $lte: filter.maxPrice };
+        if (filter.minPrice) query.price = { ...query.price, $gte: filter.minPrice };
+        if (filter.maxGuests) query.maxGuests = { $gte: filter.maxGuests };
+        if (filter.location) {
+          query.$or = [
+            { 'location.city': { $regex: filter.location, $options: 'i' } },
+            { 'location.state': { $regex: filter.location, $options: 'i' } },
+            { 'location.country': { $regex: filter.location, $options: 'i' } }
+          ];
+        }
+      }
+
+      const total = await Property.countDocuments(query);
+      const properties = await Property.find(query)
         .populate('host')
         .limit(limit)
         .skip(offset)
         .sort({ createdAt: -1 });
+
+      return properties;
     },
 
     myProperties: async (_: any, __: any, context: Context) => {
@@ -73,17 +95,15 @@ export const propertyResolvers = {
 
       const property = new Property({
         ...input,
-        host: user._id
+        host: user._id,
+        createdAt: new Date(),
+        updatedAt: new Date()
       });
 
       await property.save();
       await property.populate('host');
-
-      return {
-        success: true,
-        message: 'Property created successfully',
-        property
-      };
+      
+      return property;
     },
 
     updateProperty: async (_: any, { input }: { input: any }, context: Context) => {
@@ -108,15 +128,14 @@ export const propertyResolvers = {
 
       const updatedProperty = await Property.findByIdAndUpdate(
         input.id,
-        { $set: input },
+        {
+          ...input,
+          updatedAt: new Date()
+        },
         { new: true }
       ).populate('host');
 
-      return {
-        success: true,
-        message: 'Property updated successfully',
-        property: updatedProperty
-      };
+      return updatedProperty;
     },
 
     deleteProperty: async (_: any, { id }: { id: string }, context: Context) => {
@@ -140,11 +159,7 @@ export const propertyResolvers = {
       }
 
       await Property.findByIdAndDelete(id);
-
-      return {
-        success: true,
-        message: 'Property deleted successfully'
-      };
+      return true;
     }
   }
 };

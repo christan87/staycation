@@ -22,18 +22,24 @@ interface Context {
       name?: string | null;
       email?: string | null;
       image?: string | null;
-      role?: string;
+      role?: 'GUEST' | 'HOST' | 'ADMIN';
     };
   }) | null;
 }
 
 const baseTypeDefs = `
+  enum UserRole {
+    GUEST
+    HOST
+    ADMIN
+  }
+
   type User {
     id: ID!
     name: String!
     email: String!
     image: String
-    role: String
+    role: UserRole!
   }
 
   input LoginInput {
@@ -54,6 +60,8 @@ const baseTypeDefs = `
   type Mutation {
     loginUser(input: LoginInput!): LoginResponse!
   }
+
+  scalar Upload
 `;
 
 const baseResolvers = {
@@ -113,6 +121,9 @@ const baseResolvers = {
       }
     },
   },
+  Upload: {
+    __resolveType: () => null,
+  },
 };
 
 // Merge the base typeDefs with our image upload typeDefs
@@ -124,16 +135,18 @@ const mergedResolvers = {
   ...resolvers,
 };
 
+// Create the schema with proper configuration
 const schema = createSchema({
   typeDefs: mergedTypeDefs,
   resolvers: mergedResolvers,
 });
 
+// Create the Yoga instance with proper configuration
 const { handleRequest } = createYoga({
   schema,
   graphqlEndpoint: '/api/graphql',
   fetchAPI: { Response },
-  context: async ({ request }): Promise<Context> => {
+  context: async ({ request }) => {
     const session = await getServerSession(authOptions);
     return { session };
   },

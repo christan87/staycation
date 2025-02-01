@@ -52,7 +52,7 @@ export const authOptions: NextAuthOptions = {
             name: credentials.name,
             email: credentials.email,
             password: hashedPassword,
-            role: 'USER',
+            role: 'GUEST',
           });
 
           return {
@@ -108,7 +108,7 @@ export const authOptions: NextAuthOptions = {
               emailVerified: true,
               provider: account.provider,
               providerId: account.providerAccountId,
-              role: 'USER',
+              role: 'GUEST',
             };
             console.log('User data:', userData);
             

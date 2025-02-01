@@ -26,7 +26,7 @@ const userSchema = new Schema<IUser>({
     email: {
         type: String,
         required: [true, 'Please provide an email'],
-        unique: true,
+        unique: true,  // This is sufficient for indexing
         trim: true,
         lowercase: true
     },
@@ -73,7 +73,6 @@ const userSchema = new Schema<IUser>({
 });
 
 // Add indexes for faster queries
-userSchema.index({ email: 1 });
 userSchema.index({ role: 1 });
 
 export const User = mongoose.models.User || mongoose.model<IUser>('User', userSchema);
