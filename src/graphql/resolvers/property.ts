@@ -4,6 +4,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { Context } from '../types/context';
 import { Property } from '@/models/Property';
 import { User } from '@/models/User';
+import { Types } from 'mongoose';
 
 export const propertyResolvers = {
   Query: {
@@ -24,30 +25,52 @@ export const propertyResolvers = {
       offset?: number; 
       filter?: any;
     }) => {
-      const query: any = {};
-      
-      if (filter) {
-        if (filter.type) query.type = filter.type;
-        if (filter.maxPrice) query.price = { $lte: filter.maxPrice };
-        if (filter.minPrice) query.price = { ...query.price, $gte: filter.minPrice };
-        if (filter.maxGuests) query.maxGuests = { $gte: filter.maxGuests };
-        if (filter.location) {
-          query.$or = [
-            { 'location.city': { $regex: filter.location, $options: 'i' } },
-            { 'location.state': { $regex: filter.location, $options: 'i' } },
-            { 'location.country': { $regex: filter.location, $options: 'i' } }
-          ];
+      try {
+        const query: any = {};
+        
+        if (filter) {
+          if (filter.type) query.type = filter.type;
+          if (filter.maxPrice) query.price = { $lte: filter.maxPrice };
+          if (filter.minPrice) query.price = { ...query.price, $gte: filter.minPrice };
+          if (filter.maxGuests) query.maxGuests = { $gte: filter.maxGuests };
+          if (filter.location) {
+            query.$or = [
+              { 'location.city': { $regex: filter.location, $options: 'i' } },
+              { 'location.state': { $regex: filter.location, $options: 'i' } },
+              { 'location.country': { $regex: filter.location, $options: 'i' } }
+            ];
+          }
         }
+
+        // Set a reasonable timeout for the count operation
+        const total = await Promise.race([
+          Property.countDocuments(query),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Count operation timed out')), 5000)
+          )
+        ]);
+
+        const properties = await Property.find(query)
+          .populate('host')
+          .limit(limit)
+          .skip(offset)
+          .sort({ createdAt: -1 })
+          .lean()  // Convert to plain JavaScript objects for better performance
+          .exec(); // Explicitly execute the query
+
+        // Transform _id to id for each property
+        return properties.map(property => ({
+          ...property,
+          id: (property._id as Types.ObjectId).toString(),
+          host: property.host ? {
+            ...(property.host as any),
+            id: ((property.host as any)._id as Types.ObjectId).toString()
+          } : null
+        }));
+      } catch (error) {
+        console.error('Error in properties resolver:', error);
+        throw new GraphQLError(error instanceof Error ? error.message : 'Failed to fetch properties');
       }
-
-      const total = await Property.countDocuments(query);
-      const properties = await Property.find(query)
-        .populate('host')
-        .limit(limit)
-        .skip(offset)
-        .sort({ createdAt: -1 });
-
-      return properties;
     },
 
     myProperties: async (_: any, __: any, context: Context) => {

@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
     };
     return config;
   },
+  images: {
+    domains: ['via.placeholder.com'],
+  },
 };
 
 export default nextConfig;

@@ -19,6 +19,7 @@ export default function PropertiesPage() {
 
   const fetchProperties = async () => {
     try {
+      setLoading(true);
       const response = await fetch('/api/graphql', {
         method: 'POST',
         headers: {
@@ -33,10 +34,25 @@ export default function PropertiesPage() {
         }),
       });
 
-      const { data } = await response.json();
-      setProperties(data.properties);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.errors) {
+        throw new Error(result.errors[0]?.message || 'GraphQL Error');
+      }
+
+      if (result.data?.properties) {
+        setProperties(result.data.properties);
+      } else {
+        console.warn('No properties data in response:', result);
+        setProperties([]);
+      }
     } catch (error) {
       console.error('Error fetching properties:', error);
+      setProperties([]);
     } finally {
       setLoading(false);
     }

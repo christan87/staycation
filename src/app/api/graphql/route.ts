@@ -9,6 +9,7 @@ import bcrypt from 'bcryptjs';
 import { Session } from 'next-auth';
 import { typeDefs as imageUploadTypeDefs } from '@/graphql/schemas/schema';
 import resolvers from '@/graphql/resolvers';
+import { GraphQLError } from 'graphql';
 
 interface LoginInput {
   email: string;
@@ -135,21 +136,33 @@ const mergedResolvers = {
   ...resolvers,
 };
 
-// Create the schema with proper configuration
-const schema = createSchema({
-  typeDefs: mergedTypeDefs,
-  resolvers: mergedResolvers,
-});
-
-// Create the Yoga instance with proper configuration
-const { handleRequest } = createYoga({
-  schema,
+const yoga = createYoga({
+  schema: createSchema({
+    typeDefs: mergedTypeDefs,
+    resolvers: {
+      ...baseResolvers,
+      ...resolvers
+    },
+  }),
   graphqlEndpoint: '/api/graphql',
   fetchAPI: { Response },
-  context: async ({ request }) => {
+  async context({ request }) {
+    // Ensure database connection before processing any request
+    try {
+      await dbConnect();
+    } catch (error) {
+      console.error('Failed to connect to database:', error);
+      throw new GraphQLError('Database connection failed');
+    }
+    
     const session = await getServerSession(authOptions);
-    return { session };
-  },
+    return {
+      request,
+      session,
+    };
+  }
 });
 
+// Export the yoga handler methods directly
+const { handleRequest } = yoga;
 export { handleRequest as GET, handleRequest as POST };

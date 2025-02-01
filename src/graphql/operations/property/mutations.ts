@@ -4,7 +4,39 @@ export const CREATE_PROPERTY = `
       id
       title
       description
+      location {
+        address
+        city
+        state
+        country
+        zipCode
+        coordinates {
+          latitude
+          longitude
+        }
+      }
       price
+      images {
+        url
+        publicId
+      }
+      amenities
+      host {
+        id
+        name
+      }
+      maxGuests
+      type
+      rating
+      createdAt
+      updatedAt
+      reviews {
+        id
+        rating
+        comment
+        createdAt
+        updatedAt
+      }
     }
   }
 `;

@@ -29,20 +29,38 @@ export default function PropertyForm({ initialData, onSubmit, isLoading }: Prope
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Structure the data according to CreatePropertyInput schema
     const propertyData = {
-      ...formData,
+      title: formData.title,
+      description: formData.description,
       price: parseFloat(formData.price),
       maxGuests: parseInt(formData.maxGuests),
+      type: formData.type,
       location: {
         address: formData.address,
         city: formData.city,
         state: formData.state,
         country: formData.country,
         zipCode: formData.zipCode,
+        coordinates: {
+          latitude: 0,
+          longitude: 0
+        }
       },
+      // Add placeholder image if none provided (you should implement proper image upload)
+      images: [{
+        url: "https://via.placeholder.com/400x300",
+        publicId: "default-property-image"
+      }],
+      // Add default amenities if none provided
+      amenities: formData.amenities.length > 0 ? formData.amenities : ["Basic amenities"]
     };
 
-    await onSubmit(propertyData);
+    try {
+      await onSubmit(propertyData);
+    } catch (error) {
+      console.error('Error in form submission:', error);
+    }
   };
 
   return (
@@ -90,6 +108,69 @@ export default function PropertyForm({ initialData, onSubmit, isLoading }: Prope
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-gray-900"
             required
           />
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <label className="block text-sm font-medium text-gray-900">Location Details</label>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-900">Address</label>
+          <input
+            type="text"
+            value={formData.address}
+            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-gray-900"
+            required
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-900">City</label>
+            <input
+              type="text"
+              value={formData.city}
+              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-gray-900"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-900">State</label>
+            <input
+              type="text"
+              value={formData.state}
+              onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-gray-900"
+              required
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-900">Country</label>
+            <input
+              type="text"
+              value={formData.country}
+              onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-gray-900"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-900">Zip Code</label>
+            <input
+              type="text"
+              value={formData.zipCode}
+              onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-gray-900"
+              required
+            />
+          </div>
         </div>
       </div>
 
