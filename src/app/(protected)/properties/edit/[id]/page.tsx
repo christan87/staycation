@@ -1,82 +1,72 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import PropertyForm from '@/components/property/PropertyForm';
+import { Property } from '@/types/property';
 import { GET_PROPERTY } from '../../../../../graphql/operations/property/queries';
-import { UPDATE_PROPERTY } from '@/graphql/operations/property/mutations';
+import PropertyForm from '@/components/property/PropertyForm';
 
-export default function EditPropertyPage({ params }: { params: { id: string } }) {
+export default function EditPropertyClient({ id }: { id: string }) {
   const router = useRouter();
-  const [property, setProperty] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [property, setProperty] = useState<Property | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchProperty();
-  }, []);
-
-  const fetchProperty = async () => {
-    try {
-      const response = await fetch('/api/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          query: GET_PROPERTY,
-          variables: {
-            id: params.id,
+    const fetchProperty = async () => {
+      try {
+        const response = await fetch('/api/graphql', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-        }),
-      });
-
-      const { data } = await response.json();
-      setProperty(data.property);
-    } catch (error) {
-      console.error('Error fetching property:', error);
-    }
-  };
-
-  const handleSubmit = async (data: any) => {
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          query: UPDATE_PROPERTY,
-          variables: {
-            input: {
-              id: params.id,
-              ...data,
+          body: JSON.stringify({
+            query: GET_PROPERTY,
+            variables: {
+              id,
             },
-          },
-        }),
-      });
+          }),
+        });
 
-      const result = await response.json();
-      if (result.data?.updateProperty) {
-        router.push('/properties');
+        const { data } = await response.json();
+        if (data?.property) {
+          setProperty(data.property);
+        } else {
+          router.push('/404');
+        }
+      } catch (error) {
+        console.error('Error fetching property:', error);
+        router.push('/404');
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error updating property:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
 
-  if (!property) return <div>Loading...</div>;
+    fetchProperty();
+  }, [id, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-900">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!property) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900">Property not found</h1>
+          <p className="mt-2 text-gray-600">The property you're looking for doesn't exist or has been removed.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Edit Property</h1>
-      <PropertyForm
-        initialData={property}
-        onSubmit={handleSubmit}
-        isLoading={isLoading}
-      />
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">Edit Property</h1>
+      <PropertyForm initialData={property} />
     </div>
   );
 }

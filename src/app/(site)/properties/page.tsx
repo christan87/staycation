@@ -66,10 +66,14 @@ export default function PropertiesPage() {
     }
   };
 
-  if (loading) return <div className="text-gray-900">Loading...</div>;
+  if (loading) return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="text-gray-900">Loading...</div>
+    </div>
+  );
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Available Properties</h1>
         <Button
@@ -91,7 +95,7 @@ export default function PropertiesPage() {
               d="M12 4.5v15m7.5-7.5h-15"
             />
           </svg>
-          {session ? 'Create Property' : 'Sign in to Create'}
+          {session ? 'Create Property' : 'Create Property'}
         </Button>
       </div>
       <PropertyList properties={properties} />

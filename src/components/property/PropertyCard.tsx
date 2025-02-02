@@ -1,8 +1,8 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { Property } from '@/types/property';
+import PropertyImage from './PropertyImage';
 
 interface PropertyCardProps {
   property: Property;
@@ -13,11 +13,10 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
       <div className="relative h-48">
         {property.images && property.images.length > 0 ? (
-          <Image
+          <PropertyImage
             src={property.images[0].url}
             alt={property.title}
             fill
-            style={{ objectFit: 'cover' }}
           />
         ) : (
           <div className="w-full h-full bg-gray-200 flex items-center justify-center">

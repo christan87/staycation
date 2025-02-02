@@ -1,9 +1,9 @@
 'use client';
 
-import Image from 'next/image';
 import { Property } from '@/types/property';
 import PropertyActions from './PropertyActions';
 import { useSession } from 'next-auth/react';
+import PropertyImage from './PropertyImage';
 
 interface PropertyDetailsProps {
   property: Property;
@@ -34,11 +34,10 @@ export default function PropertyDetails({ property }: PropertyDetailsProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
         {property.images.map((image, index) => (
           <div key={image.publicId} className="relative h-64 md:h-96 rounded-lg overflow-hidden">
-            <Image
+            <PropertyImage
               src={image.url}
               alt={`${property.title} - Image ${index + 1}`}
               fill
-              style={{ objectFit: 'cover' }}
             />
           </div>
         ))}
@@ -48,22 +47,48 @@ export default function PropertyDetails({ property }: PropertyDetailsProps) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-2">
           <div className="prose max-w-none">
-            <h2 className="text-2xl font-semibold mb-4">About this place</h2>
+            <h2 className="text-2xl font-semibold mb-4 text-black">About this place</h2>
             <p className="text-gray-600">{property.description}</p>
           </div>
 
           <div className="mt-8">
-            <h3 className="text-xl font-semibold mb-4">What this place offers</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <h2 className="text-2xl font-semibold mb-4 text-black">What this property offers</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {property.amenities.map((amenity) => (
-                <div key={amenity} className="flex items-center text-gray-600">
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  {amenity}
+                <div key={amenity} className="flex items-center gap-2">
+                  <span className="text-black">✓</span>
+                  <span className="text-black">{amenity}</span>
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="mt-8">
+            <h2 className="text-2xl font-semibold mb-4 text-black">Pet Friendly?{!property.petFriendly && ' - No'}</h2>
+            {property.petFriendly && (
+              <div className="space-y-2">
+                {!property.allowsCats && !property.allowsDogs ? (
+                  <p className="text-gray-600">Contact owner for details...</p>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2">
+                      {property.allowsCats ? (
+                        <p className="text-gray-600">😺 Cats ok purrr</p>
+                      ) : (
+                        <p className="text-gray-600">😿 No cats allowed</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {property.allowsDogs ? (
+                        <p className="text-gray-600">🐶 Dogs ok woof!</p>
+                      ) : (
+                        <p className="text-gray-600">🐕 No dogs allowed</p>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

@@ -1,5 +1,13 @@
 import { GraphQLScalarType } from 'graphql';
 import { uploadImage } from '../../utils/imageUpload';
+import { v2 as cloudinary } from 'cloudinary';
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 interface FileUpload {
   createReadStream: () => NodeJS.ReadableStream;
@@ -16,19 +24,37 @@ export const imageUploadResolvers = {
   
   Mutation: {
     uploadImage: async (_: unknown, { file }: { file: Promise<FileUpload> }) => {
-      const { createReadStream } = await file;
-      const stream = createReadStream();
-      
-      // Convert stream to buffer
-      const chunks: Uint8Array[] = [];
-      for await (const chunk of stream) {
-        chunks.push(Buffer.from(chunk));
+      try {
+        const { createReadStream } = await file;
+        const stream = createReadStream();
+        
+        // Convert stream to buffer
+        const chunks: Uint8Array[] = [];
+        for await (const chunk of stream) {
+          chunks.push(Buffer.from(chunk));
+        }
+        const buffer = Buffer.concat(chunks);
+        
+        // Upload to Cloudinary
+        const result = await uploadImage(buffer);
+        return {
+          url: result.url,
+          publicId: result.publicId
+        };
+      } catch (error) {
+        console.error('Error in uploadImage resolver:', error);
+        throw new Error('Failed to upload image');
       }
-      const buffer = Buffer.concat(chunks);
-      
-      // Upload to Cloudinary
-      const result = await uploadImage(buffer);
-      return result;
+    },
+
+    deleteImage: async (_: unknown, { publicId }: { publicId: string }) => {
+      try {
+        await cloudinary.uploader.destroy(publicId);
+        return true;
+      } catch (error) {
+        console.error('Error deleting image:', error);
+        return false;
+      }
     },
   },
 };

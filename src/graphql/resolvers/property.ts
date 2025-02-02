@@ -13,6 +13,12 @@ export const propertyResolvers = {
       if (!property) {
         throw new GraphQLError('Property not found');
       }
+      
+      // Add default values for pet-friendly fields if they don't exist
+      property.petFriendly = property.petFriendly ?? false;
+      property.allowsCats = property.allowsCats ?? false;
+      property.allowsDogs = property.allowsDogs ?? false;
+      
       return property;
     },
     
@@ -119,6 +125,9 @@ export const propertyResolvers = {
       const property = new Property({
         ...input,
         host: user._id,
+        petFriendly: input.petFriendly ?? false,
+        allowsCats: input.allowsCats ?? false,
+        allowsDogs: input.allowsDogs ?? false,
         createdAt: new Date(),
         updatedAt: new Date()
       });

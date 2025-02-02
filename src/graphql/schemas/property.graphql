@@ -11,6 +11,9 @@ type Property {
   type: PropertyType!
   rating: Float
   reviews: [Review!]
+  petFriendly: Boolean
+  allowsCats: Boolean
+  allowsDogs: Boolean
   createdAt: String!
   updatedAt: String!
 }
@@ -25,8 +28,8 @@ type Location {
 }
 
 type Coordinates {
-  latitude: Float!
-  longitude: Float!
+  latitude: Float
+  longitude: Float
 }
 
 type Image {
@@ -59,6 +62,9 @@ input CreatePropertyInput {
   amenities: [String!]!
   maxGuests: Int!
   type: PropertyType!
+  petFriendly: Boolean
+  allowsCats: Boolean
+  allowsDogs: Boolean
 }
 
 input LocationInput {
@@ -71,8 +77,8 @@ input LocationInput {
 }
 
 input CoordinatesInput {
-  latitude: Float!
-  longitude: Float!
+  latitude: Float
+  longitude: Float
 }
 
 input ImageInput {
@@ -90,6 +96,9 @@ input UpdatePropertyInput {
   amenities: [String!]
   maxGuests: Int
   type: PropertyType
+  petFriendly: Boolean
+  allowsCats: Boolean
+  allowsDogs: Boolean
 }
 
 type PropertyResponse {
@@ -115,6 +124,9 @@ input PropertyFilterInput {
   minPrice: Float
   location: String
   maxGuests: Int
+  petFriendly: Boolean
+  allowsCats: Boolean
+  allowsDogs: Boolean
 }
 
 type Mutation {

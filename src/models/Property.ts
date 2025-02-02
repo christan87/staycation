@@ -26,6 +26,9 @@ export interface IProperty extends Document {
     type: 'HOUSE' | 'APARTMENT' | 'VILLA' | 'CABIN' | 'COTTAGE';
     rating?: number;
     reviews?: Types.ObjectId[];
+    petFriendly: boolean;
+    allowsCats: boolean;
+    allowsDogs: boolean;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -110,7 +113,19 @@ const propertySchema = new Schema<IProperty>({
     reviews: [{
         type: Schema.Types.ObjectId,
         ref: 'Review'
-    }]
+    }],
+    petFriendly: {
+        type: Boolean,
+        default: false
+    },
+    allowsCats: {
+        type: Boolean,
+        default: false
+    },
+    allowsDogs: {
+        type: Boolean,
+        default: false
+    }
 }, {
     timestamps: true
 });

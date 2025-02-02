@@ -10,7 +10,11 @@ const nextConfig: NextConfig = {
     return config;
   },
   images: {
-    domains: ['via.placeholder.com'],
+    domains: [
+      'via.placeholder.com',
+      'res.cloudinary.com',  // Add Cloudinary domain
+      'picsum.photos'        // Add Picsum Photos domain
+    ],
   },
 };
 

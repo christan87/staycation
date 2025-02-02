@@ -1,0 +1,16 @@
+scalar Upload
+
+type Image {
+  url: String!
+  publicId: String!
+}
+
+input ImageInput {
+  url: String!
+  publicId: String!
+}
+
+type Mutation {
+  uploadImage(file: Upload!): Image!
+  deleteImage(publicId: String!): Boolean!
+}

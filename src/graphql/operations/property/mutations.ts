@@ -28,6 +28,9 @@ export const CREATE_PROPERTY = `
       maxGuests
       type
       rating
+      petFriendly
+      allowsCats
+      allowsDogs
       createdAt
       updatedAt
       reviews {

@@ -44,6 +44,9 @@ export interface Property {
   maxGuests: number;
   type: PropertyType;
   rating?: number;
+  petFriendly: boolean;
+  allowsCats: boolean;
+  allowsDogs: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
