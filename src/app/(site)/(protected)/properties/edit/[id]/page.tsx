@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Property } from '@/types/property';
-import { GET_PROPERTY } from '../../../../../graphql/operations/property/queries';
+import { GET_PROPERTY } from '../../../../../../graphql/operations/property/queries';
 import PropertyForm from '@/components/property/PropertyForm';
 
 export default function EditPropertyClient({ id }: { id: string }) {

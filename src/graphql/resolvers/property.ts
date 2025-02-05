@@ -5,6 +5,12 @@ import { Context } from '../types/context';
 import { Property } from '@/models/Property';
 import { User } from '@/models/User';
 import { Types } from 'mongoose';
+import { deleteImage } from '@/lib/cloudinary';
+
+interface PropertyImage {
+  url: string;
+  publicId: string;
+}
 
 export const propertyResolvers = {
   Query: {
@@ -190,8 +196,30 @@ export const propertyResolvers = {
         throw new GraphQLError('Not authorized to delete this property');
       }
 
-      await Property.findByIdAndDelete(id);
-      return true;
+      try {
+        // Delete all associated images from Cloudinary
+        const deletePromises = property.images.map(async (image: PropertyImage) => {
+          if (image.publicId) {
+            try {
+              await deleteImage(image.publicId);
+            } catch (error) {
+              console.error(`Failed to delete image ${image.publicId}:`, error);
+              // Continue with other deletions even if one fails
+            }
+          }
+        });
+
+        // Wait for all image deletions to complete
+        await Promise.all(deletePromises);
+
+        // Delete the property from the database
+        await Property.findByIdAndDelete(id);
+        
+        return true;
+      } catch (error) {
+        console.error('Error deleting property:', error);
+        throw new GraphQLError('Failed to delete property and its associated images');
+      }
     }
   }
 };

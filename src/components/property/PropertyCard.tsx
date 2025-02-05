@@ -6,9 +6,11 @@ import PropertyImage from './PropertyImage';
 
 interface PropertyCardProps {
   property: Property;
+  showManageButtons?: boolean;
+  onDelete?: () => void;
 }
 
-export default function PropertyCard({ property }: PropertyCardProps) {
+export default function PropertyCard({ property, showManageButtons, onDelete }: PropertyCardProps) {
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
       <div className="relative h-48">
@@ -24,7 +26,6 @@ export default function PropertyCard({ property }: PropertyCardProps) {
           </div>
         )}
       </div>
-      
       <div className="p-4">
         <h3 className="text-lg font-semibold text-gray-900 mb-2">
           <Link href={`/properties/${property.id}`} className="hover:text-indigo-600">
@@ -52,6 +53,32 @@ export default function PropertyCard({ property }: PropertyCardProps) {
               </svg>
               <span className="ml-1 text-sm text-gray-600">{property.rating}</span>
             </div>
+          )}
+        </div>
+        
+        <div className="mt-4 flex flex-col space-y-2">
+          {showManageButtons ? (
+            <>
+              <Link 
+                href={`/properties/edit/${property.id}`}
+                className="bg-blue-600 text-white px-4 py-2 rounded text-center hover:bg-blue-700 transition-colors"
+              >
+                Edit Property
+              </Link>
+              <button
+                onClick={onDelete}
+                className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition-colors"
+              >
+                Delete Property
+              </button>
+            </>
+          ) : (
+            <Link 
+              href={`/properties/${property.id}`}
+              className="bg-blue-600 text-white px-4 py-2 rounded text-center hover:bg-blue-700 transition-colors"
+            >
+              View Details
+            </Link>
           )}
         </div>
         

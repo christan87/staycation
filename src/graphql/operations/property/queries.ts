@@ -69,18 +69,37 @@ export const GET_MY_PROPERTIES = `
       id
       title
       description
+      location {
+        address
+        city
+        state
+        country
+        zipCode
+        coordinates {
+          latitude
+          longitude
+        }
+      }
       price
       images {
         url
         publicId
       }
-      location {
-        city
-        country
+      amenities
+      host {
+        id
+        name
+        email
+        image
       }
       maxGuests
       type
       rating
+      petFriendly
+      allowsCats
+      allowsDogs
+      createdAt
+      updatedAt
     }
   }
 `;
