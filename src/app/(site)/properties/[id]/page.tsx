@@ -4,6 +4,7 @@ import { use } from 'react';
 import PropertyDetails from '@/components/property/PropertyDetails';
 import { GET_PROPERTY } from '@/graphql/operations/property/queries';
 import { headers } from 'next/headers';
+import { notFound } from 'next/navigation';
 
 async function getProperty(id: string) {
   try {
@@ -50,9 +51,21 @@ async function getProperty(id: string) {
   }
 }
 
-export default async function PropertyPage({ params }: { params: { id: string } }) {
+interface PageProps {
+  params: {
+    id: string;
+  };
+}
+
+export default async function PropertyPage({ params }: PageProps) {
+  if (!params?.id) {
+    return notFound();
+  }
+
   try {
-    const property = await getProperty(params.id);
+    // Ensure params.id is properly awaited by checking it first
+    const id = params.id;
+    const property = await getProperty(id);
 
     if (!property) {
       return (

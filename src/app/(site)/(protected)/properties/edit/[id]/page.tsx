@@ -1,12 +1,13 @@
+// page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { Property } from '@/types/property';
 import { GET_PROPERTY } from '../../../../../../graphql/operations/property/queries';
 import PropertyForm from '@/components/property/PropertyForm';
 
-export default function EditPropertyClient({ id }: { id: string }) {
+function EditPropertyClient({ id }: { id: string }) {
   const router = useRouter();
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,4 +70,9 @@ export default function EditPropertyClient({ id }: { id: string }) {
       <PropertyForm initialData={property} />
     </div>
   );
+}
+
+export default function EditPropertyPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
+  return <EditPropertyClient id={resolvedParams.id} />;
 }

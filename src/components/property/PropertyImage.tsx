@@ -10,16 +10,25 @@ interface PropertyImageProps {
   width?: number;
   height?: number;
   className?: string;
+  objectFit?: 'contain' | 'cover';
 }
 
-export default function PropertyImage({ src, alt, fill, width, height, className }: PropertyImageProps) {
+export default function PropertyImage({ 
+  src, 
+  alt, 
+  fill, 
+  width, 
+  height, 
+  className,
+  objectFit = 'cover' 
+}: PropertyImageProps) {
   const [error, setError] = useState(false);
 
   // Use a local placeholder image
   const fallbackImage = '/images/property-placeholder.jpg';
   
   const imageProps = fill 
-    ? { fill: true, style: { objectFit: 'cover' as const } }
+    ? { fill: true, style: { objectFit } }
     : { width, height };
 
   return (
