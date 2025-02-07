@@ -19,7 +19,7 @@ export interface IBooking extends Document {
 
 // Static methods interface
 export interface IBookingModel extends Model<IBooking> {
-    checkAvailability(propertyId: mongoose.Types.ObjectId, checkIn: Date, checkOut: Date): Promise<boolean>;
+    checkAvailability(propertyId: mongoose.Types.ObjectId | string, checkIn: Date, checkOut: Date): Promise<boolean>;
 }
 
 const bookingSchema = new Schema<IBooking>({
@@ -27,13 +27,13 @@ const bookingSchema = new Schema<IBooking>({
         type: Schema.Types.ObjectId,
         ref: 'Property',
         required: [true, 'Property is required'],
-        index: true  // Index for faster lookups
+        index: true
     },
     guest: {
         type: Schema.Types.ObjectId,
         ref: 'User',
         required: [true, 'Guest is required'],
-        index: true  // Index for faster lookups
+        index: true
     },
     checkIn: {
         type: Date,
@@ -50,7 +50,7 @@ const bookingSchema = new Schema<IBooking>({
         required: [true, 'Check-out date is required'],
         validate: {
             validator: function(this: IBooking, checkOut: Date) {
-                return this.checkIn < checkOut;
+                return !this.checkIn || checkOut > this.checkIn;
             },
             message: 'Check-out date must be after check-in date'
         }
@@ -68,13 +68,13 @@ const bookingSchema = new Schema<IBooking>({
         type: String,
         enum: ['pending', 'confirmed', 'cancelled', 'completed'],
         default: 'pending',
-        required: [true, 'Booking status is required']
+        lowercase: true
     },
     paymentStatus: {
         type: String,
         enum: ['pending', 'paid', 'refunded'],
         default: 'pending',
-        required: [true, 'Payment status is required']
+        lowercase: true
     }
 }, {
     timestamps: true
@@ -82,12 +82,14 @@ const bookingSchema = new Schema<IBooking>({
 
 // Add checkAvailability as a static method
 bookingSchema.statics.checkAvailability = async function(
-    propertyId: mongoose.Types.ObjectId,
+    propertyId: mongoose.Types.ObjectId | string,
     checkIn: Date,
     checkOut: Date
 ): Promise<boolean> {
+    const propertyObjectId = typeof propertyId === 'string' ? new mongoose.Types.ObjectId(propertyId) : propertyId;
+    
     const overlappingBookings = await this.find({
-        property: propertyId,
+        property: propertyObjectId,
         status: { $nin: ['cancelled'] },
         $or: [
             {

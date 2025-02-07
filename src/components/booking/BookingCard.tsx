@@ -1,12 +1,21 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { Booking } from '@/types/booking';
 import BookingStatusBadge from './BookingStatusBadge';
 
 interface BookingCardProps {
   booking: Booking;
 }
+
+const formatDate = (dateString: string) => {
+  try {
+    return format(parseISO(dateString), 'MMM d, yyyy');
+  } catch (error) {
+    console.error('Error formatting date:', dateString, error);
+    return 'Invalid date';
+  }
+};
 
 export default function BookingCard({ booking }: BookingCardProps) {
   return (
@@ -38,10 +47,10 @@ export default function BookingCard({ booking }: BookingCardProps) {
           
           <div className="mt-4 space-y-1 text-sm text-gray-500">
             <p>
-              Check-in: {format(new Date(booking.checkIn), 'MMM d, yyyy')}
+              Check-in: {formatDate(booking.checkIn)}
             </p>
             <p>
-              Check-out: {format(new Date(booking.checkOut), 'MMM d, yyyy')}
+              Check-out: {formatDate(booking.checkOut)}
             </p>
             <p>
               Guests: {booking.numberOfGuests}
@@ -53,7 +62,7 @@ export default function BookingCard({ booking }: BookingCardProps) {
               ${booking.totalPrice.toFixed(2)}
             </p>
             <p className="text-sm text-gray-500">
-              Booked {format(new Date(booking.createdAt), 'MMM d, yyyy')}
+              Booked {formatDate(booking.createdAt)}
             </p>
           </div>
         </div>

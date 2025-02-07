@@ -38,6 +38,7 @@ export const GET_MY_BOOKINGS = `
         title
         images {
           url
+          publicId
         }
         location {
           address
@@ -48,6 +49,12 @@ export const GET_MY_BOOKINGS = `
         }
         price
       }
+      guest {
+        id
+        name
+        email
+        image
+      }
       checkIn
       checkOut
       totalPrice
@@ -55,6 +62,7 @@ export const GET_MY_BOOKINGS = `
       status
       paymentStatus
       createdAt
+      updatedAt
     }
   }
 `;

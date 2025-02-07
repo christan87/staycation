@@ -26,6 +26,32 @@ interface UpdateBookingInput {
   paymentStatus?: 'pending' | 'paid' | 'refunded';
 }
 
+interface PopulatedProperty {
+  _id: mongoose.Types.ObjectId;
+  title: string;
+  images: Array<{ url: string; publicId: string }>;
+  location: {
+    address: string;
+    city: string;
+    state: string;
+    country: string;
+    zipCode: string;
+  };
+  price: number;
+}
+
+interface PopulatedGuest {
+  _id: mongoose.Types.ObjectId;
+  name: string;
+  email: string;
+  image: string;
+}
+
+interface PopulatedBooking extends Omit<IBooking, 'property' | 'guest'> {
+  property: PopulatedProperty;
+  guest: PopulatedGuest;
+}
+
 export const bookingResolvers = {
   Query: {
     booking: async (_: any, { id }: { id: string }, context: Context) => {
@@ -77,26 +103,61 @@ export const bookingResolvers = {
       }
 
       try {
-        // Find the user by email
         const user = await UserModel.findOne({ email: context.session.user?.email });
         if (!user) {
           throw new GraphQLError('User not found');
         }
 
-        // Get bookings and convert status to uppercase if needed
         const bookings = await BookingModel.find({ guest: user._id })
-          .populate('property')
-          .populate('guest')
-          .sort({ createdAt: -1 })
-          .lean();
-        
-        // Convert status to uppercase for GraphQL response
-        const formattedBookings = bookings.map(booking => ({
-          ...booking,
-          id: (booking._id as mongoose.Types.ObjectId).toString(),
-          status: booking.status.toUpperCase(),
-          paymentStatus: booking.paymentStatus.toUpperCase()
-        }));
+          .populate({
+            path: 'property',
+            model: 'Property',
+            select: 'id title images location price'
+          })
+          .populate({
+            path: 'guest',
+            model: 'User',
+            select: 'id name email image'
+          })
+          .sort({ createdAt: -1 });
+
+        const formattedBookings = bookings.map(booking => {
+          const formattedBooking = booking.toObject() as PopulatedBooking;
+          
+          if (!formattedBooking.property || typeof formattedBooking.property !== 'object') {
+            throw new GraphQLError('Property data is missing or invalid');
+          }
+
+          // Ensure dates are valid ISO strings
+          const checkIn = new Date(formattedBooking.checkIn);
+          const checkOut = new Date(formattedBooking.checkOut);
+          const createdAt = new Date(formattedBooking.createdAt);
+          const updatedAt = new Date(formattedBooking.updatedAt);
+
+          if (isNaN(checkIn.getTime()) || isNaN(checkOut.getTime()) || 
+              isNaN(createdAt.getTime()) || isNaN(updatedAt.getTime())) {
+            throw new GraphQLError('Invalid date values in booking');
+          }
+
+          return {
+            ...formattedBooking,
+            id: formattedBooking._id.toString(),
+            property: {
+              ...formattedBooking.property,
+              id: formattedBooking.property._id.toString()
+            },
+            guest: {
+              ...formattedBooking.guest,
+              id: formattedBooking.guest._id.toString()
+            },
+            status: formattedBooking.status.toUpperCase(),
+            paymentStatus: formattedBooking.paymentStatus.toUpperCase(),
+            checkIn: checkIn.toISOString(),
+            checkOut: checkOut.toISOString(),
+            createdAt: createdAt.toISOString(),
+            updatedAt: updatedAt.toISOString()
+          };
+        });
         
         return formattedBookings;
       } catch (error) {
