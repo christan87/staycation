@@ -36,6 +36,12 @@ export default function BookingCreatePage({
     numberOfGuests: 1,
   });
 
+  const getTomorrowDate = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
+  };
+
   useEffect(() => {
     const fetchProperty = async () => {
       try {
@@ -142,7 +148,7 @@ export default function BookingCreatePage({
               required
               value={bookingData.checkIn}
               onChange={(e) => setBookingData({ ...bookingData, checkIn: e.target.value })}
-              min={new Date().toISOString().split('T')[0]}
+              min={getTomorrowDate()}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
