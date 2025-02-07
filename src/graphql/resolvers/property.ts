@@ -2,8 +2,8 @@ import { GraphQLError } from 'graphql';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { Context } from '../types/context';
-import { Property } from '@/models/Property';
-import { User } from '@/models/User';
+import { Property, IProperty } from '@/models/Property';
+import { User, IUser } from '@/models/User';
 import { Types } from 'mongoose';
 import { deleteImage } from '@/lib/cloudinary';
 
@@ -11,6 +11,12 @@ interface PropertyImage {
   url: string;
   publicId: string;
 }
+
+// MongoDB document types
+type MongoDocument = {
+  _id: Types.ObjectId;
+  [key: string]: any;
+};
 
 export const propertyResolvers = {
   Query: {
@@ -54,29 +60,20 @@ export const propertyResolvers = {
           }
         }
 
-        // Set a reasonable timeout for the count operation
-        const total = await Promise.race([
-          Property.countDocuments(query),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Count operation timed out')), 5000)
-          )
-        ]);
-
         const properties = await Property.find(query)
           .populate('host')
           .limit(limit)
           .skip(offset)
           .sort({ createdAt: -1 })
-          .lean()  // Convert to plain JavaScript objects for better performance
-          .exec(); // Explicitly execute the query
+          .lean()
+          .exec();
 
-        // Transform _id to id for each property
-        return properties.map(property => ({
+        return (properties as MongoDocument[]).map(property => ({
           ...property,
-          id: (property._id as Types.ObjectId).toString(),
+          id: property._id.toString(),
           host: property.host ? {
-            ...(property.host as any),
-            id: ((property.host as any)._id as Types.ObjectId).toString()
+            ...property.host,
+            id: (property.host as MongoDocument)._id.toString()
           } : null
         }));
       } catch (error) {
@@ -86,17 +83,43 @@ export const propertyResolvers = {
     },
 
     myProperties: async (_: any, __: any, context: Context) => {
-      const session = await getServerSession(authOptions);
-      if (!session?.user?.email) {
-        throw new GraphQLError('Not authenticated');
+      if (!context.session) {
+        throw new GraphQLError('Not authenticated', {
+          extensions: { code: 'UNAUTHENTICATED' }
+        });
       }
 
-      const user = await User.findOne({ email: session.user.email });
-      if (!user) {
-        throw new GraphQLError('User not found');
-      }
+      try {
+        const user = await User.findOne({ email: context.session.user?.email });
+        if (!user) {
+          throw new GraphQLError('User not found');
+        }
 
-      return await Property.find({ host: user._id }).populate('host');
+        const properties = await Property.find({ host: user._id })
+          .populate('host')
+          .lean()
+          .exec();
+
+        // Transform properties to match GraphQL schema
+        return (properties as MongoDocument[]).map(property => ({
+          ...property,
+          id: property._id.toString(),
+          host: property.host ? {
+            ...property.host,
+            id: (property.host as MongoDocument)._id.toString()
+          } : null,
+          createdAt: new Date(property.createdAt).toISOString(),
+          updatedAt: new Date(property.updatedAt).toISOString(),
+          petFriendly: property.petFriendly ?? false,
+          allowsCats: property.allowsCats ?? false,
+          allowsDogs: property.allowsDogs ?? false,
+          rating: property.rating ?? null,
+          reviews: property.reviews ?? []
+        }));
+      } catch (error) {
+        console.error('Error fetching properties:', error);
+        throw new GraphQLError('Failed to fetch properties');
+      }
     },
 
     searchProperties: async (_: any, { query }: { query: string }) => {
@@ -198,7 +221,7 @@ export const propertyResolvers = {
 
       try {
         // Delete all associated images from Cloudinary
-        const deletePromises = property.images.map(async (image: PropertyImage) => {
+        const deletePromises = (property.images as (MongoDocument & PropertyImage)[]).map(async (image) => {
           if (image.publicId) {
             try {
               await deleteImage(image.publicId);

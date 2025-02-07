@@ -24,6 +24,7 @@ export default function MyPropertiesPage() {
     if (status === 'authenticated') {
       const fetchProperties = async () => {
         try {
+          console.log('Fetching properties...');
           const response = await fetch('/api/graphql', {
             method: 'POST',
             headers: {
@@ -31,17 +32,37 @@ export default function MyPropertiesPage() {
             },
             body: JSON.stringify({
               query: GET_MY_PROPERTIES,
-            }),
+            })
           });
 
-          if (!response.ok) {
-            throw new Error('Failed to fetch properties');
+          // Log the response details for debugging
+          console.log('Response status:', response.status);
+          console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+          
+          const text = await response.text();
+          console.log('Raw response:', text);
+
+          // Only try to parse if we got a non-empty response
+          if (!text.trim()) {
+            throw new Error('Empty response from server');
           }
 
-          const result = await response.json();
+          // Check if we got an HTML response (error page)
+          if (text.trim().startsWith('<!DOCTYPE')) {
+            throw new Error('Received HTML instead of JSON. Server error occurred.');
+          }
+
+          const result = JSON.parse(text);
 
           if (result.errors) {
-            throw new Error(result.errors[0]?.message || 'Failed to fetch properties');
+            console.error('GraphQL Errors:', result.errors);
+            const errorMessage = result.errors[0]?.message || 'Failed to fetch properties';
+            throw new Error(errorMessage);
+          }
+
+          if (!result.data?.myProperties) {
+            console.error('No properties data in response:', result);
+            throw new Error('No properties data received');
           }
 
           setProperties(result.data.myProperties);

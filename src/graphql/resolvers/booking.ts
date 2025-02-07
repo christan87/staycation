@@ -1,15 +1,13 @@
 import { GraphQLError } from 'graphql';
-import { IBooking, IBookingModel, Booking } from '@/models/Booking';
+import { IBooking, IBookingModel, BookingModel } from '@/models/Booking';
 import mongoose from 'mongoose';
 import { getServerSession } from 'next-auth';
+import { Session } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-
-// Get the models using mongoose.model to avoid circular dependencies
-const Property = mongoose.model('Property');
-const User = mongoose.model('User');
+import { User as UserModel } from '@/models/User';
 
 interface Context {
-  session: Awaited<ReturnType<typeof getServerSession>>;
+  session: Session | null;
 }
 
 interface CreateBookingInput {
@@ -31,12 +29,11 @@ interface UpdateBookingInput {
 export const bookingResolvers = {
   Query: {
     booking: async (_: any, { id }: { id: string }, context: Context) => {
-      const session = await getServerSession(authOptions);
-      if (!session?.user?.email) {
+      if (!context.session) {
         throw new GraphQLError('Not authenticated');
       }
 
-      const booking = await Booking.findById(id)
+      const booking = await BookingModel.findById(id)
         .populate('property')
         .populate('guest');
 
@@ -45,13 +42,13 @@ export const bookingResolvers = {
       }
 
       // Check if user is authorized to view this booking
-      const user = await User.findOne({ email: session.user.email });
+      const user = await UserModel.findOne({ email: context.session.user?.email });
       if (!user) {
         throw new GraphQLError('User not found');
       }
 
       const isGuest = booking.guest._id.toString() === user._id.toString();
-      const property = await Property.findById(booking.property);
+      const property = await mongoose.model('Property').findById(booking.property);
       if (!property) {
         throw new GraphQLError('Property not found');
       }
@@ -61,24 +58,51 @@ export const bookingResolvers = {
         throw new GraphQLError('Not authorized to view this booking');
       }
 
-      return booking;
+      // Convert to uppercase for GraphQL response
+      const formattedBooking = {
+        ...booking.toObject(),
+        id: (booking._id as mongoose.Types.ObjectId).toString(),
+        status: booking.status.toUpperCase(),
+        paymentStatus: booking.paymentStatus.toUpperCase()
+      };
+
+      return formattedBooking;
     },
 
     myBookings: async (_: any, __: any, context: Context) => {
-      const session = await getServerSession(authOptions);
-      if (!session?.user?.email) {
-        throw new GraphQLError('Not authenticated');
+      if (!context.session) {
+        throw new GraphQLError('User is not authenticated', {
+          extensions: { code: 'UNAUTHENTICATED' }
+        });
       }
 
-      const user = await User.findOne({ email: session.user.email });
-      if (!user) {
-        throw new GraphQLError('User not found');
-      }
+      try {
+        // Find the user by email
+        const user = await UserModel.findOne({ email: context.session.user?.email });
+        if (!user) {
+          throw new GraphQLError('User not found');
+        }
 
-      return Booking.find({ guest: user._id })
-        .populate('property')
-        .populate('guest')
-        .sort({ createdAt: -1 });
+        // Get bookings and convert status to uppercase if needed
+        const bookings = await BookingModel.find({ guest: user._id })
+          .populate('property')
+          .populate('guest')
+          .sort({ createdAt: -1 })
+          .lean();
+        
+        // Convert status to uppercase for GraphQL response
+        const formattedBookings = bookings.map(booking => ({
+          ...booking,
+          id: (booking._id as mongoose.Types.ObjectId).toString(),
+          status: booking.status.toUpperCase(),
+          paymentStatus: booking.paymentStatus.toUpperCase()
+        }));
+        
+        return formattedBookings;
+      } catch (error) {
+        console.error('Error fetching bookings:', error);
+        throw new GraphQLError('Failed to fetch bookings');
+      }
     },
 
     propertyBookings: async (_: any, { propertyId }: { propertyId: string }, context: Context) => {
@@ -87,13 +111,13 @@ export const bookingResolvers = {
         throw new GraphQLError('Not authenticated');
       }
 
-      const user = await User.findOne({ email: session.user.email });
+      const user = await UserModel.findOne({ email: session.user.email });
       if (!user) {
         throw new GraphQLError('User not found');
       }
 
       // Verify user is the property host
-      const property = await Property.findById(propertyId);
+      const property = await mongoose.model('Property').findById(propertyId);
       if (!property) {
         throw new GraphQLError('Property not found');
       }
@@ -102,14 +126,14 @@ export const bookingResolvers = {
         throw new GraphQLError('Not authorized to view these bookings');
       }
 
-      return Booking.find({ property: propertyId })
+      return BookingModel.find({ property: propertyId })
         .populate('property')
         .populate('guest')
         .sort({ checkIn: 1 });
     },
 
     checkAvailability: async (_: any, { propertyId, checkIn, checkOut }: { propertyId: string, checkIn: string, checkOut: string }) => {
-      const isAvailable = await Booking.checkAvailability(
+      const isAvailable = await BookingModel.checkAvailability(
         new mongoose.Types.ObjectId(propertyId),
         new Date(checkIn),
         new Date(checkOut)
@@ -120,24 +144,23 @@ export const bookingResolvers = {
 
   Mutation: {
     createBooking: async (_: any, { input }: { input: CreateBookingInput }, context: Context) => {
-      const session = await getServerSession(authOptions);
-      if (!session?.user?.email) {
+      if (!context.session?.user?.email) {
         throw new GraphQLError('Not authenticated');
       }
 
-      const user = await User.findOne({ email: session.user.email });
+      const user = await UserModel.findOne({ email: context.session.user.email });
       if (!user) {
         throw new GraphQLError('User not found');
       }
 
       try {
-        const property = await Property.findById(input.propertyId);
+        const property = await mongoose.model('Property').findById(input.propertyId);
         if (!property) {
           throw new GraphQLError('Property not found');
         }
 
         // Check availability
-        const isAvailable = await Booking.checkAvailability(
+        const isAvailable = await BookingModel.checkAvailability(
           new mongoose.Types.ObjectId(input.propertyId),
           new Date(input.checkIn),
           new Date(input.checkOut)
@@ -153,7 +176,7 @@ export const bookingResolvers = {
         const numberOfNights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
         const totalPrice = property.price * numberOfNights;
 
-        const booking = await Booking.create({
+        const booking = await BookingModel.create({
           property: input.propertyId,
           guest: user._id,
           checkIn: new Date(input.checkIn),
@@ -166,15 +189,24 @@ export const bookingResolvers = {
 
         await booking.populate(['property', 'guest']);
 
+        // Convert to uppercase for GraphQL response
+        const formattedBooking = {
+          ...booking.toObject(),
+          id: (booking._id as mongoose.Types.ObjectId).toString(),
+          status: booking.status.toUpperCase(),
+          paymentStatus: booking.paymentStatus.toUpperCase()
+        };
+
         return {
           success: true,
           message: 'Booking created successfully',
-          booking
+          booking: formattedBooking
         };
       } catch (error: any) {
+        console.error('Error creating booking:', error);
         return {
           success: false,
-          message: error.message,
+          message: error.message || 'Failed to create booking',
           booking: null
         };
       }
@@ -186,13 +218,13 @@ export const bookingResolvers = {
         throw new GraphQLError('Not authenticated');
       }
 
-      const user = await User.findOne({ email: session.user.email });
+      const user = await UserModel.findOne({ email: session.user.email });
       if (!user) {
         throw new GraphQLError('User not found');
       }
 
       try {
-        const booking = await Booking.findById(input.bookingId);
+        const booking = await BookingModel.findById(input.bookingId);
         if (!booking) {
           throw new GraphQLError('Booking not found');
         }
@@ -208,7 +240,7 @@ export const bookingResolvers = {
             ? booking.property 
             : new mongoose.Types.ObjectId(booking.property.toString());
 
-          const isAvailable = await Booking.checkAvailability(
+          const isAvailable = await BookingModel.checkAvailability(
             propertyId,
             new Date(input.checkIn || booking.checkIn),
             new Date(input.checkOut || booking.checkOut)
@@ -219,7 +251,7 @@ export const bookingResolvers = {
           }
         }
 
-        const updatedBooking = await Booking.findByIdAndUpdate(
+        const updatedBooking = await BookingModel.findByIdAndUpdate(
           input.bookingId,
           {
             ...input,
@@ -229,10 +261,22 @@ export const bookingResolvers = {
           { new: true }
         ).populate(['property', 'guest']);
 
+        if (!updatedBooking) {
+          throw new GraphQLError('Booking not found');
+        }
+
+        // Convert to uppercase for GraphQL response
+        const formattedBooking = {
+          ...updatedBooking.toObject(),
+          id: (updatedBooking._id as mongoose.Types.ObjectId).toString(),
+          status: updatedBooking.status.toUpperCase(),
+          paymentStatus: updatedBooking.paymentStatus.toUpperCase()
+        };
+
         return {
           success: true,
           message: 'Booking updated successfully',
-          booking: updatedBooking
+          booking: formattedBooking
         };
       } catch (error: any) {
         return {
@@ -249,19 +293,19 @@ export const bookingResolvers = {
         throw new GraphQLError('Not authenticated');
       }
 
-      const user = await User.findOne({ email: session.user.email });
+      const user = await UserModel.findOne({ email: session.user.email });
       if (!user) {
         throw new GraphQLError('User not found');
       }
 
       try {
-        const booking = await Booking.findById(bookingId);
+        const booking = await BookingModel.findById(bookingId);
         if (!booking) {
           throw new GraphQLError('Booking not found');
         }
 
         // Check authorization (allow both guest and host to cancel)
-        const property = await Property.findById(booking.property);
+        const property = await mongoose.model('Property').findById(booking.property);
         if (!property) {
           throw new GraphQLError('Property not found');
         }
@@ -273,7 +317,7 @@ export const bookingResolvers = {
           throw new GraphQLError('Not authorized to cancel this booking');
         }
 
-        const updatedBooking = await Booking.findByIdAndUpdate(
+        const updatedBooking = await BookingModel.findByIdAndUpdate(
           bookingId,
           {
             status: 'cancelled',
@@ -282,10 +326,22 @@ export const bookingResolvers = {
           { new: true }
         ).populate(['property', 'guest']);
 
+        if (!updatedBooking) {
+          throw new GraphQLError('Booking not found');
+        }
+
+        // Convert to uppercase for GraphQL response
+        const formattedBooking = {
+          ...updatedBooking.toObject(),
+          id: (updatedBooking._id as mongoose.Types.ObjectId).toString(),
+          status: updatedBooking.status.toUpperCase(),
+          paymentStatus: updatedBooking.paymentStatus.toUpperCase()
+        };
+
         return {
           success: true,
           message: 'Booking cancelled successfully',
-          booking: updatedBooking
+          booking: formattedBooking
         };
       } catch (error: any) {
         return {
@@ -302,19 +358,19 @@ export const bookingResolvers = {
         throw new GraphQLError('Not authenticated');
       }
 
-      const user = await User.findOne({ email: session.user.email });
+      const user = await UserModel.findOne({ email: session.user.email });
       if (!user) {
         throw new GraphQLError('User not found');
       }
 
       try {
-        const booking = await Booking.findById(bookingId);
+        const booking = await BookingModel.findById(bookingId);
         if (!booking) {
           throw new GraphQLError('Booking not found');
         }
 
         // Only host can confirm booking
-        const property = await Property.findById(booking.property);
+        const property = await mongoose.model('Property').findById(booking.property);
         if (!property) {
           throw new GraphQLError('Property not found');
         }
@@ -323,7 +379,7 @@ export const bookingResolvers = {
           throw new GraphQLError('Not authorized to confirm this booking');
         }
 
-        const updatedBooking = await Booking.findByIdAndUpdate(
+        const updatedBooking = await BookingModel.findByIdAndUpdate(
           bookingId,
           {
             status: 'confirmed'
@@ -331,10 +387,22 @@ export const bookingResolvers = {
           { new: true }
         ).populate(['property', 'guest']);
 
+        if (!updatedBooking) {
+          throw new GraphQLError('Booking not found');
+        }
+
+        // Convert to uppercase for GraphQL response
+        const formattedBooking = {
+          ...updatedBooking.toObject(),
+          id: (updatedBooking._id as mongoose.Types.ObjectId).toString(),
+          status: updatedBooking.status.toUpperCase(),
+          paymentStatus: updatedBooking.paymentStatus.toUpperCase()
+        };
+
         return {
           success: true,
           message: 'Booking confirmed successfully',
-          booking: updatedBooking
+          booking: formattedBooking
         };
       } catch (error: any) {
         return {
@@ -351,19 +419,19 @@ export const bookingResolvers = {
         throw new GraphQLError('Not authenticated');
       }
 
-      const user = await User.findOne({ email: session.user.email });
+      const user = await UserModel.findOne({ email: session.user.email });
       if (!user) {
         throw new GraphQLError('User not found');
       }
 
       try {
-        const booking = await Booking.findById(bookingId);
+        const booking = await BookingModel.findById(bookingId);
         if (!booking) {
           throw new GraphQLError('Booking not found');
         }
 
         // Only host can complete booking
-        const property = await Property.findById(booking.property);
+        const property = await mongoose.model('Property').findById(booking.property);
         if (!property) {
           throw new GraphQLError('Property not found');
         }
@@ -372,7 +440,7 @@ export const bookingResolvers = {
           throw new GraphQLError('Not authorized to complete this booking');
         }
 
-        const updatedBooking = await Booking.findByIdAndUpdate(
+        const updatedBooking = await BookingModel.findByIdAndUpdate(
           bookingId,
           {
             status: 'completed'
@@ -380,10 +448,22 @@ export const bookingResolvers = {
           { new: true }
         ).populate(['property', 'guest']);
 
+        if (!updatedBooking) {
+          throw new GraphQLError('Booking not found');
+        }
+
+        // Convert to uppercase for GraphQL response
+        const formattedBooking = {
+          ...updatedBooking.toObject(),
+          id: (updatedBooking._id as mongoose.Types.ObjectId).toString(),
+          status: updatedBooking.status.toUpperCase(),
+          paymentStatus: updatedBooking.paymentStatus.toUpperCase()
+        };
+
         return {
           success: true,
           message: 'Booking completed successfully',
-          booking: updatedBooking
+          booking: formattedBooking
         };
       } catch (error: any) {
         return {

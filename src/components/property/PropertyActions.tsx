@@ -34,35 +34,39 @@ export default function PropertyActions({ property }: PropertyActionsProps) {
         }),
       });
 
-      const { data } = await response.json();
-      if (data.deleteProperty) {
-        router.push('/properties/my');
-        router.refresh();
+      const result = await response.json();
+
+      if (result.errors) {
+        throw new Error(result.errors[0].message);
       }
+
+      router.push('/properties');
+      router.refresh();
     } catch (error) {
       console.error('Error deleting property:', error);
-      alert('Failed to delete property. Please try again.');
+      alert('Failed to delete property');
     } finally {
       setIsDeleting(false);
     }
   };
 
   return (
-    <div className="flex flex-col gap-3">
-      <Link
-        href={`/properties/edit/${property.id}`}
-        className="w-full px-4 py-2 text-sm font-medium text-white text-center bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-      >
-        Edit Property
-      </Link>
-      
-      <button
-        onClick={handleDelete}
-        disabled={isDeleting}
-        className="w-full px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
-      >
-        {isDeleting ? 'Deleting...' : 'Delete Property'}
-      </button>
+    <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="space-y-4">
+        <Link
+          href={`/properties/${property.id}/edit`}
+          className="block w-full bg-blue-600 text-white text-center py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+        >
+          Edit Property
+        </Link>
+        <button
+          onClick={handleDelete}
+          disabled={isDeleting}
+          className="w-full bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 transition-colors disabled:bg-red-400"
+        >
+          {isDeleting ? 'Deleting...' : 'Delete Property'}
+        </button>
+      </div>
     </div>
   );
 }

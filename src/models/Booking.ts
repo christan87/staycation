@@ -1,11 +1,12 @@
-import mongoose, { Schema, Document, Types, Model } from "mongoose";
-import { IProperty } from "./Property";
-import { User } from "./User";
+import mongoose, { Document, Model, Schema } from 'mongoose';
+import { IProperty } from './Property';
+import { User } from './User';
 
 // Interface for type safety
 export interface IBooking extends Document {
-    property: Types.ObjectId | IProperty;  // Allow populated property
-    guest: Types.ObjectId | InstanceType<typeof User>;  // Allow populated guest
+    _id: mongoose.Types.ObjectId;
+    property: mongoose.Types.ObjectId | IProperty;  // Allow populated property
+    guest: mongoose.Types.ObjectId | InstanceType<typeof User>;  // Allow populated guest
     checkIn: Date;
     checkOut: Date;
     totalPrice: number;
@@ -18,7 +19,7 @@ export interface IBooking extends Document {
 
 // Static methods interface
 export interface IBookingModel extends Model<IBooking> {
-    checkAvailability(propertyId: Types.ObjectId, checkIn: Date, checkOut: Date): Promise<boolean>;
+    checkAvailability(propertyId: mongoose.Types.ObjectId, checkIn: Date, checkOut: Date): Promise<boolean>;
 }
 
 const bookingSchema = new Schema<IBooking>({
@@ -49,15 +50,14 @@ const bookingSchema = new Schema<IBooking>({
         required: [true, 'Check-out date is required'],
         validate: {
             validator: function(this: IBooking, checkOut: Date) {
-                return checkOut > this.checkIn;
+                return this.checkIn < checkOut;
             },
             message: 'Check-out date must be after check-in date'
         }
     },
     totalPrice: {
         type: Number,
-        required: [true, 'Total price is required'],
-        min: [0, 'Total price cannot be negative']
+        required: [true, 'Total price is required']
     },
     numberOfGuests: {
         type: Number,
@@ -68,60 +68,37 @@ const bookingSchema = new Schema<IBooking>({
         type: String,
         enum: ['pending', 'confirmed', 'cancelled', 'completed'],
         default: 'pending',
-        required: true
+        required: [true, 'Booking status is required']
     },
     paymentStatus: {
         type: String,
         enum: ['pending', 'paid', 'refunded'],
         default: 'pending',
-        required: true
+        required: [true, 'Payment status is required']
     }
 }, {
-    timestamps: true,
-    toJSON: { virtuals: true },  // Enable virtuals when converting to JSON
-    toObject: { virtuals: true } // Enable virtuals when converting to object
+    timestamps: true
 });
 
-// Add compound indexes for faster queries and ensuring data integrity
-bookingSchema.index({ property: 1, checkIn: 1, checkOut: 1 });
-bookingSchema.index({ guest: 1, status: 1 });
-bookingSchema.index({ property: 1, guest: 1, status: 1 });
-
-// Middleware to ensure property exists before saving
-bookingSchema.pre('save', async function(next) {
-    if (this.isNew || this.isModified('property')) {
-        const property = await mongoose.model('Property').findById(this.property);
-        if (!property) {
-            throw new Error('Property does not exist');
-        }
-    }
-    next();
-});
-
-// Middleware to ensure guest exists before saving
-bookingSchema.pre('save', async function(next) {
-    if (this.isNew || this.isModified('guest')) {
-        const guest = await mongoose.model('User').findById(this.guest);
-        if (!guest) {
-            throw new Error('Guest does not exist');
-        }
-    }
-    next();
-});
-
-// Method to check booking availability
+// Add checkAvailability as a static method
 bookingSchema.statics.checkAvailability = async function(
-    propertyId: Types.ObjectId,
+    propertyId: mongoose.Types.ObjectId,
     checkIn: Date,
     checkOut: Date
 ): Promise<boolean> {
     const overlappingBookings = await this.find({
         property: propertyId,
-        status: { $nin: ['cancelled'] },  // Exclude cancelled bookings
+        status: { $nin: ['cancelled'] },
         $or: [
-            { 
-                checkIn: { $lte: checkOut },
-                checkOut: { $gte: checkIn }
+            {
+                checkIn: { $lt: checkOut },
+                checkOut: { $gt: checkIn }
+            },
+            {
+                checkIn: { $gte: checkIn, $lt: checkOut }
+            },
+            {
+                checkOut: { $gt: checkIn, $lte: checkOut }
             }
         ]
     });
@@ -136,28 +113,12 @@ bookingSchema.pre('save', async function(next) {
         if (!property) {
             throw new Error('Property not found');
         }
-        if (this.numberOfGuests > property.guests) {
-            throw new Error(`Number of guests cannot exceed property capacity of ${property.guests}`);
+        if (this.numberOfGuests > property.maxGuests) {
+            throw new Error(`Number of guests cannot exceed property capacity of ${property.maxGuests}`);
         }
     }
     next();
 });
 
-// Virtual populate for property
-bookingSchema.virtual('propertyDetails', {
-    ref: 'Property',
-    localField: 'property',
-    foreignField: '_id',
-    justOne: true
-});
-
-// Virtual populate for guest
-bookingSchema.virtual('guestDetails', {
-    ref: 'User',
-    localField: 'guest',
-    foreignField: '_id',
-    justOne: true
-});
-
-// Export the Booking model with a check to prevent overwriting
-export const Booking = mongoose.models.Booking || mongoose.model<IBooking, IBookingModel>('Booking', bookingSchema);
+// Create and export the model
+export const BookingModel: IBookingModel = (mongoose.models.Booking || mongoose.model<IBooking, IBookingModel>('Booking', bookingSchema)) as IBookingModel;

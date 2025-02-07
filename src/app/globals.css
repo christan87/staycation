@@ -19,3 +19,15 @@ body {
   background: rgb(var(--background-rgb));
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Form input overrides */
+input[type="text"],
+input[type="number"],
+input[type="date"],
+input[type="email"],
+input[type="password"],
+textarea,
+select {
+  color: rgb(15, 23, 42) !important; /* slate-900 */
+  background-color: white !important;
+}

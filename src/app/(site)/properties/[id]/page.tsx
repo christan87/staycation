@@ -5,10 +5,17 @@ import PropertyDetails from '@/components/property/PropertyDetails';
 import { GET_PROPERTY } from '@/graphql/operations/property/queries';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { redirect } from 'next/navigation';
 
 async function getProperty(id: string) {
   try {
-    // Get the host from headers
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      redirect('/login');
+    }
+
     const headersList = await headers();
     const host = headersList.get('host');
     const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
@@ -17,6 +24,7 @@ async function getProperty(id: string) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Cookie: headersList.get('cookie') || '',
       },
       body: JSON.stringify({
         query: GET_PROPERTY,
@@ -24,7 +32,7 @@ async function getProperty(id: string) {
           id,
         },
       }),
-      next: { revalidate: 60 }, // Revalidate every minute
+      next: { revalidate: 60 },
     });
 
     if (!response.ok) {
@@ -58,13 +66,13 @@ interface PageProps {
 }
 
 export default async function PropertyPage({ params }: PageProps) {
-  if (!params?.id) {
+  // Validate and extract the ID parameter
+  const id = await Promise.resolve(params?.id);
+  if (!id) {
     return notFound();
   }
 
   try {
-    // Ensure params.id is properly awaited by checking it first
-    const id = params.id;
     const property = await getProperty(id);
 
     if (!property) {
@@ -84,8 +92,8 @@ export default async function PropertyPage({ params }: PageProps) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Error loading property</h1>
-          <p className="mt-2 text-gray-600">There was an error loading the property. Please try again later.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Error</h1>
+          <p className="mt-2 text-gray-600">Something went wrong while loading the property.</p>
         </div>
       </div>
     );
