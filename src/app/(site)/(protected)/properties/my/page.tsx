@@ -159,10 +159,43 @@ export default function MyPropertiesPage() {
     }
   };
 
-  const handleAcceptTerms = () => {
-    setIsAuthorized(true);
-    setShowTerms(false);
-    router.push('/properties/new');
+  const handleAcceptTerms = async () => {
+    try {
+      const response = await fetch('/api/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: `
+            mutation BecomeHost {
+              becomeHost {
+                success
+                message
+                user {
+                  id
+                  role
+                }
+              }
+            }
+          `
+        })
+      });
+
+      const result = await response.json();
+
+      if (!result.data?.becomeHost?.success) {
+        throw new Error(result.data?.becomeHost?.message || 'Failed to become a host');
+      }
+
+      setIsAuthorized(true);
+      setShowTerms(false);
+      router.push('/properties/new');
+    } catch (error) {
+      console.error('Error becoming host:', error);
+      // You might want to show an error message to the user here
+      setShowTerms(false);
+    }
   };
 
   if (status === 'loading' || loading) {
