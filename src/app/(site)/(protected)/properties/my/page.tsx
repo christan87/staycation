@@ -7,10 +7,83 @@ import PropertyCard from '@/components/property/PropertyCard';
 import { useSession } from 'next-auth/react';
 import { Property, PropertyType } from '@/types/property';
 
+// Terms and Conditions Overlay Component
+const TermsOverlay = ({ 
+  isOpen, 
+  onAccept, 
+  onDecline 
+}: { 
+  isOpen: boolean; 
+  onAccept: () => void; 
+  onDecline: () => void;
+}) => {
+  const [hasRead, setHasRead] = useState(false);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center text-slate-900">
+      <div className="bg-white p-6 rounded-lg max-w-2xl w-full mx-4">
+        <h2 className="text-2xl font-bold mb-4">Terms and Conditions</h2>
+        <div 
+          className="h-64 overflow-y-auto mb-4 p-4 border rounded"
+          style={{ scrollbarWidth: 'thin' }}
+        >
+          <h3 className="font-semibold mb-2">Property Listing Agreement</h3>
+          <p className="mb-4">
+            By accepting these terms, you agree to the following conditions for listing properties on our platform:
+          </p>
+          <ul className="list-disc pl-5 space-y-2">
+            <li>You confirm that you are the legal owner or authorized representative of the property being listed.</li>
+            <li>All information provided about the property must be accurate and truthful.</li>
+            <li>You agree to maintain the property in the condition described in the listing.</li>
+            <li>You will respond to booking requests in a timely manner.</li>
+            <li>You understand that false information may result in listing removal.</li>
+            <li>You agree to comply with all local laws and regulations regarding property rentals.</li>
+            <li>You will maintain appropriate insurance coverage for the property.</li>
+            <li>You accept responsibility for guest communication and property management.</li>
+          </ul>
+        </div>
+        <div className="flex items-center mb-4">
+          <input
+            type="checkbox"
+            id="terms-checkbox"
+            checked={hasRead}
+            onChange={(e) => setHasRead(e.target.checked)}
+            className="mr-2"
+          />
+          <label htmlFor="terms-checkbox">
+            I have read and agree to the terms and conditions
+          </label>
+        </div>
+        <div className="flex justify-end gap-4">
+          <button
+            onClick={onDecline}
+            className="px-4 py-2 text-gray-600 border rounded hover:bg-gray-100"
+          >
+            Decline
+          </button>
+          <button
+            onClick={onAccept}
+            disabled={!hasRead}
+            className={`px-4 py-2 text-white rounded ${
+              hasRead ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'
+            }`}
+          >
+            Accept
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function MyPropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showTerms, setShowTerms] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState(false);
   const router = useRouter();
   const { data: session, status } = useSession();
 
@@ -78,6 +151,20 @@ export default function MyPropertiesPage() {
     }
   }, [status, router]);
 
+  const handleCreateProperty = () => {
+    if (isAuthorized) {
+      router.push('/properties/new');
+    } else {
+      setShowTerms(true);
+    }
+  };
+
+  const handleAcceptTerms = () => {
+    setIsAuthorized(true);
+    setShowTerms(false);
+    router.push('/properties/new');
+  };
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -101,10 +188,15 @@ export default function MyPropertiesPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <TermsOverlay
+        isOpen={showTerms}
+        onAccept={handleAcceptTerms}
+        onDecline={() => setShowTerms(false)}
+      />
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900">My Properties</h1>
         <button
-          onClick={() => router.push('/properties/new')}
+          onClick={handleCreateProperty}
           className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
         >
           Add New Property
@@ -115,7 +207,7 @@ export default function MyPropertiesPage() {
         <div className="text-center py-12">
           <p className="text-gray-600 mb-4">You haven't listed any properties yet.</p>
           <button
-            onClick={() => router.push('/properties/new')}
+            onClick={handleCreateProperty}
             className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
           >
             Create Your First Listing
