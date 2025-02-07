@@ -228,7 +228,11 @@ export const bookingResolvers = {
         );
 
         if (!isAvailable) {
-          throw new GraphQLError('Property is not available for these dates');
+          return {
+            success: false,
+            message: 'Property is not available for these dates',
+            booking: null
+          };
         }
 
         // Calculate total price
@@ -248,14 +252,44 @@ export const bookingResolvers = {
           paymentStatus: 'pending'
         });
 
-        await booking.populate(['property', 'guest']);
+        // Populate and transform the booking
+        const populatedBooking = await BookingModel.findById(booking._id)
+          .populate({
+            path: 'property',
+            select: 'id title images location price'
+          })
+          .populate({
+            path: 'guest',
+            select: 'id name email image'
+          });
 
-        // Convert to uppercase for GraphQL response
+        if (!populatedBooking || !populatedBooking.property) {
+          throw new GraphQLError('Failed to create booking');
+        }
+
         const formattedBooking = {
-          ...booking.toObject(),
-          id: (booking._id as mongoose.Types.ObjectId).toString(),
-          status: booking.status.toUpperCase(),
-          paymentStatus: booking.paymentStatus.toUpperCase()
+          id: populatedBooking._id.toString(),
+          property: {
+            id: populatedBooking.property._id.toString(),
+            title: populatedBooking.property.title,
+            images: populatedBooking.property.images,
+            location: populatedBooking.property.location,
+            price: populatedBooking.property.price
+          },
+          guest: {
+            id: populatedBooking.guest._id.toString(),
+            name: populatedBooking.guest.name,
+            email: populatedBooking.guest.email,
+            image: populatedBooking.guest.image
+          },
+          checkIn: populatedBooking.checkIn.toISOString(),
+          checkOut: populatedBooking.checkOut.toISOString(),
+          totalPrice: populatedBooking.totalPrice,
+          numberOfGuests: populatedBooking.numberOfGuests,
+          status: populatedBooking.status.toUpperCase(),
+          paymentStatus: populatedBooking.paymentStatus.toUpperCase(),
+          createdAt: populatedBooking.createdAt.toISOString(),
+          updatedAt: populatedBooking.updatedAt.toISOString()
         };
 
         return {

@@ -93,8 +93,13 @@ export default function BookingCreatePage({
       });
 
       const result = await response.json();
+      
       if (result.errors) {
         throw new Error(result.errors[0].message);
+      }
+
+      if (!result.data?.createBooking?.success) {
+        throw new Error(result.data?.createBooking?.message || 'Failed to create booking');
       }
 
       // Redirect to the bookings page after successful creation
@@ -102,7 +107,7 @@ export default function BookingCreatePage({
       router.refresh();
     } catch (error) {
       console.error('Error creating booking:', error);
-      alert('Failed to create booking');
+      alert(error instanceof Error ? error.message : 'Failed to create booking');
     } finally {
       setLoading(false);
     }
