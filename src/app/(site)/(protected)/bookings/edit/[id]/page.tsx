@@ -6,26 +6,25 @@ import { useSession } from 'next-auth/react';
 import { Container } from '@/components/Container';
 import { Button } from '@/components/Button';
 import { UPDATE_BOOKING } from '@/graphql/operations/booking/mutations';
-import { Property as PropertyType, Location } from '@/types/property';
 
-interface Property extends PropertyType {}
+interface Property {
+  id: string;
+  title: string;
+  price: number;
+  maxGuests: number;
+  images: { url: string }[];
+  location: {
+    address: string;
+    city: string;
+    state: string;
+    country: string;
+    zipCode: string;
+  };
+}
 
 interface Booking {
   id: string;
-  property: {
-    id: string;
-    title: string;
-    price: number;
-    maxGuests: number;
-    images: { url: string }[];
-    location: {
-      address: string;
-      city: string;
-      state: string;
-      country: string;
-      zipCode: string;
-    };
-  };
+  property: Property;
   checkIn: string;
   checkOut: string;
   numberOfGuests: number;
@@ -63,6 +62,7 @@ export default function BookingEditPage({
     }
 
     const fetchBooking = async () => {
+      console.log('Attempting to fetch booking with ID:', resolvedParams.id);
       try {
         const response = await fetch('/api/graphql', {
           method: 'POST',
@@ -104,18 +104,44 @@ export default function BookingEditPage({
           }),
         });
 
+        console.log('GraphQL response status:', response.status);
         const result = await response.json();
+        
+        console.log('Raw GraphQL result:', JSON.stringify(result, null, 2));
         
         if (result.errors) {
           console.error('GraphQL Errors:', result.errors);
+          console.error('Error details:', JSON.stringify(result.errors, null, 2));
           throw new Error(result.errors[0].message);
         }
 
-        if (!result.data?.booking) {
+        if (!result.data) {
+          console.error('No data returned from GraphQL');
+          throw new Error('No data returned from server');
+        }
+
+        if (!result.data.booking) {
+          console.error('No booking found with ID:', resolvedParams.id);
           throw new Error('Booking not found');
         }
 
-        const fetchedBooking = result.data.booking;
+        // Log the booking data structure
+        console.log('Booking data structure:', {
+          id: result.data.booking.id,
+          propertyId: result.data.booking.property.id,
+          checkIn: result.data.booking.checkIn,
+          checkOut: result.data.booking.checkOut,
+        });
+
+        // Format the booking data to match our interface
+        const fetchedBooking = {
+          ...result.data.booking,
+          property: {
+            ...result.data.booking.property,
+          },
+        };
+
+        console.log('Formatted booking data:', JSON.stringify(fetchedBooking, null, 2));
         setBooking(fetchedBooking);
         setBookingData({
           checkIn: fetchedBooking.checkIn.split('T')[0],
@@ -123,7 +149,12 @@ export default function BookingEditPage({
           numberOfGuests: fetchedBooking.numberOfGuests,
         });
       } catch (error) {
-        console.error('Error fetching booking:', error);
+        console.error('Error in fetchBooking:', error);
+        if (error instanceof Error) {
+          console.error('Error name:', error.name);
+          console.error('Error message:', error.message);
+          console.error('Error stack:', error.stack);
+        }
         alert('Failed to load booking details');
         router.push('/bookings');
       }

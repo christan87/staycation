@@ -38,6 +38,9 @@ interface PopulatedProperty {
     zipCode: string;
   };
   price: number;
+  maxGuests: number;
+  host: mongoose.Types.ObjectId;
+  toObject: () => any;
 }
 
 interface PopulatedGuest {
@@ -45,11 +48,13 @@ interface PopulatedGuest {
   name: string;
   email: string;
   image: string;
+  toObject: () => any;
 }
 
 interface PopulatedBooking extends Omit<IBooking, 'property' | 'guest'> {
   property: PopulatedProperty;
   guest: PopulatedGuest;
+  toObject: () => any;
 }
 
 export const bookingResolvers = {
@@ -60,11 +65,22 @@ export const bookingResolvers = {
       }
 
       const booking = await BookingModel.findById(id)
-        .populate('property')
-        .populate('guest');
+        .populate<{ property: PopulatedProperty }>({
+          path: 'property',
+          select: 'id title images location price maxGuests host'
+        })
+        .populate<{ guest: PopulatedGuest }>('guest')
+        .exec();
 
       if (!booking) {
         throw new GraphQLError('Booking not found');
+      }
+
+      // Check if property and guest are populated
+      if (!booking.property || !booking.guest || 
+          booking.property instanceof mongoose.Types.ObjectId || 
+          booking.guest instanceof mongoose.Types.ObjectId) {
+        throw new GraphQLError('Failed to load booking details');
       }
 
       // Check if user is authorized to view this booking
@@ -74,20 +90,25 @@ export const bookingResolvers = {
       }
 
       const isGuest = booking.guest._id.toString() === user._id.toString();
-      const property = await mongoose.model('Property').findById(booking.property);
-      if (!property) {
-        throw new GraphQLError('Property not found');
-      }
-      const isHost = property.host.toString() === user._id.toString();
+      const isHost = booking.property.host?.toString() === user._id.toString();
 
       if (!isGuest && !isHost) {
         throw new GraphQLError('Not authorized to view this booking');
       }
 
-      // Convert to uppercase for GraphQL response
+      // Transform the MongoDB document to match GraphQL schema
+      const bookingObj = booking.toObject();
       const formattedBooking = {
-        ...booking.toObject(),
-        id: (booking._id as mongoose.Types.ObjectId).toString(),
+        ...bookingObj,
+        id: booking._id.toString(),
+        property: {
+          ...bookingObj.property,
+          id: booking.property._id.toString(),
+        },
+        guest: {
+          ...bookingObj.guest,
+          id: booking.guest._id.toString(),
+        },
         status: booking.status.toUpperCase(),
         paymentStatus: booking.paymentStatus.toUpperCase()
       };
@@ -109,12 +130,12 @@ export const bookingResolvers = {
         }
 
         const bookings = await BookingModel.find({ guest: user._id })
-          .populate({
+          .populate<{ property: PopulatedProperty }>({
             path: 'property',
             model: 'Property',
-            select: 'id title images location price'
+            select: 'id title images location price maxGuests host'
           })
-          .populate({
+          .populate<{ guest: PopulatedGuest }>({
             path: 'guest',
             model: 'User',
             select: 'id name email image'
@@ -122,17 +143,19 @@ export const bookingResolvers = {
           .sort({ createdAt: -1 });
 
         const formattedBookings = bookings.map(booking => {
-          const formattedBooking = booking.toObject() as PopulatedBooking;
+          const bookingObj = booking.toObject() as PopulatedBooking;
           
-          if (!formattedBooking.property || typeof formattedBooking.property !== 'object') {
-            throw new GraphQLError('Property data is missing or invalid');
+          if (!bookingObj.property || !bookingObj.guest || 
+              bookingObj.property instanceof mongoose.Types.ObjectId || 
+              bookingObj.guest instanceof mongoose.Types.ObjectId) {
+            throw new GraphQLError('Failed to load booking details');
           }
 
           // Ensure dates are valid ISO strings
-          const checkIn = new Date(formattedBooking.checkIn);
-          const checkOut = new Date(formattedBooking.checkOut);
-          const createdAt = new Date(formattedBooking.createdAt);
-          const updatedAt = new Date(formattedBooking.updatedAt);
+          const checkIn = new Date(bookingObj.checkIn);
+          const checkOut = new Date(bookingObj.checkOut);
+          const createdAt = new Date(bookingObj.createdAt);
+          const updatedAt = new Date(bookingObj.updatedAt);
 
           if (isNaN(checkIn.getTime()) || isNaN(checkOut.getTime()) || 
               isNaN(createdAt.getTime()) || isNaN(updatedAt.getTime())) {
@@ -140,18 +163,18 @@ export const bookingResolvers = {
           }
 
           return {
-            ...formattedBooking,
-            id: formattedBooking._id.toString(),
+            ...bookingObj,
+            id: bookingObj._id.toString(),
             property: {
-              ...formattedBooking.property,
-              id: formattedBooking.property._id.toString()
+              ...bookingObj.property,
+              id: bookingObj.property._id.toString()
             },
             guest: {
-              ...formattedBooking.guest,
-              id: formattedBooking.guest._id.toString()
+              ...bookingObj.guest,
+              id: bookingObj.guest._id.toString()
             },
-            status: formattedBooking.status.toUpperCase(),
-            paymentStatus: formattedBooking.paymentStatus.toUpperCase(),
+            status: bookingObj.status.toUpperCase(),
+            paymentStatus: bookingObj.paymentStatus.toUpperCase(),
             checkIn: checkIn.toISOString(),
             checkOut: checkOut.toISOString(),
             createdAt: createdAt.toISOString(),
@@ -188,8 +211,8 @@ export const bookingResolvers = {
       }
 
       return BookingModel.find({ property: propertyId })
-        .populate('property')
-        .populate('guest')
+        .populate<{ property: PopulatedProperty }>('property')
+        .populate<{ guest: PopulatedGuest }>('guest')
         .sort({ checkIn: 1 });
     },
 
@@ -254,42 +277,39 @@ export const bookingResolvers = {
 
         // Populate and transform the booking
         const populatedBooking = await BookingModel.findById(booking._id)
-          .populate({
+          .populate<{ property: PopulatedProperty }>({
             path: 'property',
-            select: 'id title images location price'
+            select: 'id title images location price maxGuests host'
           })
-          .populate({
+          .populate<{ guest: PopulatedGuest }>({
             path: 'guest',
             select: 'id name email image'
           });
 
-        if (!populatedBooking || !populatedBooking.property) {
+        if (!populatedBooking || !populatedBooking.property || !populatedBooking.guest) {
           throw new GraphQLError('Failed to create booking');
         }
 
+        const bookingObj = populatedBooking.toObject();
         const formattedBooking = {
-          id: populatedBooking._id.toString(),
+          ...bookingObj,
+          id: bookingObj._id.toString(),
           property: {
-            id: populatedBooking.property._id.toString(),
-            title: populatedBooking.property.title,
-            images: populatedBooking.property.images,
-            location: populatedBooking.property.location,
-            price: populatedBooking.property.price
+            ...bookingObj.property,
+            id: bookingObj.property._id.toString(),
           },
           guest: {
-            id: populatedBooking.guest._id.toString(),
-            name: populatedBooking.guest.name,
-            email: populatedBooking.guest.email,
-            image: populatedBooking.guest.image
+            ...bookingObj.guest,
+            id: bookingObj.guest._id.toString(),
           },
-          checkIn: populatedBooking.checkIn.toISOString(),
-          checkOut: populatedBooking.checkOut.toISOString(),
-          totalPrice: populatedBooking.totalPrice,
-          numberOfGuests: populatedBooking.numberOfGuests,
-          status: populatedBooking.status.toUpperCase(),
-          paymentStatus: populatedBooking.paymentStatus.toUpperCase(),
-          createdAt: populatedBooking.createdAt.toISOString(),
-          updatedAt: populatedBooking.updatedAt.toISOString()
+          checkIn: bookingObj.checkIn.toISOString(),
+          checkOut: bookingObj.checkOut.toISOString(),
+          totalPrice: bookingObj.totalPrice,
+          numberOfGuests: bookingObj.numberOfGuests,
+          status: bookingObj.status.toUpperCase(),
+          paymentStatus: bookingObj.paymentStatus.toUpperCase(),
+          createdAt: bookingObj.createdAt.toISOString(),
+          updatedAt: bookingObj.updatedAt.toISOString()
         };
 
         return {
@@ -348,22 +368,36 @@ export const bookingResolvers = {
 
         const updatedBooking = await BookingModel.findByIdAndUpdate(
           input.bookingId,
-          {
-            ...input,
-            checkIn: input.checkIn ? new Date(input.checkIn) : undefined,
-            checkOut: input.checkOut ? new Date(input.checkOut) : undefined
-          },
+          { $set: input },
           { new: true }
-        ).populate(['property', 'guest']);
+        )
+        .populate<{ property: PopulatedProperty }>('property')
+        .populate<{ guest: PopulatedGuest }>('guest')
+        .exec();
 
         if (!updatedBooking) {
           throw new GraphQLError('Booking not found');
         }
 
-        // Convert to uppercase for GraphQL response
+        // Check if property and guest are populated
+        if (!updatedBooking.property || !updatedBooking.guest || 
+            updatedBooking.property instanceof mongoose.Types.ObjectId || 
+            updatedBooking.guest instanceof mongoose.Types.ObjectId) {
+          throw new GraphQLError('Failed to load booking details');
+        }
+
+        const bookingObj = updatedBooking.toObject();
         const formattedBooking = {
-          ...updatedBooking.toObject(),
-          id: (updatedBooking._id as mongoose.Types.ObjectId).toString(),
+          ...bookingObj,
+          id: updatedBooking._id.toString(),
+          property: {
+            ...bookingObj.property,
+            id: updatedBooking.property._id.toString(),
+          },
+          guest: {
+            ...bookingObj.guest,
+            id: updatedBooking.guest._id.toString(),
+          },
           status: updatedBooking.status.toUpperCase(),
           paymentStatus: updatedBooking.paymentStatus.toUpperCase()
         };
@@ -419,16 +453,34 @@ export const bookingResolvers = {
             paymentStatus: 'refunded'
           },
           { new: true }
-        ).populate(['property', 'guest']);
+        )
+        .populate<{ property: PopulatedProperty }>('property')
+        .populate<{ guest: PopulatedGuest }>('guest')
+        .exec();
 
         if (!updatedBooking) {
           throw new GraphQLError('Booking not found');
         }
 
-        // Convert to uppercase for GraphQL response
+        // Check if property and guest are populated
+        if (!updatedBooking.property || !updatedBooking.guest || 
+            updatedBooking.property instanceof mongoose.Types.ObjectId || 
+            updatedBooking.guest instanceof mongoose.Types.ObjectId) {
+          throw new GraphQLError('Failed to load booking details');
+        }
+
+        const bookingObj = updatedBooking.toObject();
         const formattedBooking = {
-          ...updatedBooking.toObject(),
-          id: (updatedBooking._id as mongoose.Types.ObjectId).toString(),
+          ...bookingObj,
+          id: updatedBooking._id.toString(),
+          property: {
+            ...bookingObj.property,
+            id: updatedBooking.property._id.toString(),
+          },
+          guest: {
+            ...bookingObj.guest,
+            id: updatedBooking.guest._id.toString(),
+          },
           status: updatedBooking.status.toUpperCase(),
           paymentStatus: updatedBooking.paymentStatus.toUpperCase()
         };
@@ -480,16 +532,34 @@ export const bookingResolvers = {
             status: 'confirmed'
           },
           { new: true }
-        ).populate(['property', 'guest']);
+        )
+        .populate<{ property: PopulatedProperty }>('property')
+        .populate<{ guest: PopulatedGuest }>('guest')
+        .exec();
 
         if (!updatedBooking) {
           throw new GraphQLError('Booking not found');
         }
 
-        // Convert to uppercase for GraphQL response
+        // Check if property and guest are populated
+        if (!updatedBooking.property || !updatedBooking.guest || 
+            updatedBooking.property instanceof mongoose.Types.ObjectId || 
+            updatedBooking.guest instanceof mongoose.Types.ObjectId) {
+          throw new GraphQLError('Failed to load booking details');
+        }
+
+        const bookingObj = updatedBooking.toObject();
         const formattedBooking = {
-          ...updatedBooking.toObject(),
-          id: (updatedBooking._id as mongoose.Types.ObjectId).toString(),
+          ...bookingObj,
+          id: updatedBooking._id.toString(),
+          property: {
+            ...bookingObj.property,
+            id: updatedBooking.property._id.toString(),
+          },
+          guest: {
+            ...bookingObj.guest,
+            id: updatedBooking.guest._id.toString(),
+          },
           status: updatedBooking.status.toUpperCase(),
           paymentStatus: updatedBooking.paymentStatus.toUpperCase()
         };
@@ -541,16 +611,34 @@ export const bookingResolvers = {
             status: 'completed'
           },
           { new: true }
-        ).populate(['property', 'guest']);
+        )
+        .populate<{ property: PopulatedProperty }>('property')
+        .populate<{ guest: PopulatedGuest }>('guest')
+        .exec();
 
         if (!updatedBooking) {
           throw new GraphQLError('Booking not found');
         }
 
-        // Convert to uppercase for GraphQL response
+        // Check if property and guest are populated
+        if (!updatedBooking.property || !updatedBooking.guest || 
+            updatedBooking.property instanceof mongoose.Types.ObjectId || 
+            updatedBooking.guest instanceof mongoose.Types.ObjectId) {
+          throw new GraphQLError('Failed to load booking details');
+        }
+
+        const bookingObj = updatedBooking.toObject();
         const formattedBooking = {
-          ...updatedBooking.toObject(),
-          id: (updatedBooking._id as mongoose.Types.ObjectId).toString(),
+          ...bookingObj,
+          id: updatedBooking._id.toString(),
+          property: {
+            ...bookingObj.property,
+            id: updatedBooking.property._id.toString(),
+          },
+          guest: {
+            ...bookingObj.guest,
+            id: updatedBooking.guest._id.toString(),
+          },
           status: updatedBooking.status.toUpperCase(),
           paymentStatus: updatedBooking.paymentStatus.toUpperCase()
         };
