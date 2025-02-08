@@ -48,7 +48,13 @@ export default function BookingEditPage({
     numberOfGuests: 1,
   });
 
-  const getTomorrowDate = () => {
+  const getMinDate = (currentValue: string) => {
+    // If we're editing an existing booking and have the original dates, don't restrict them
+    if (booking && currentValue) {
+      return undefined; // This removes the min restriction for existing dates
+    }
+    
+    // For new dates, use tomorrow as the minimum
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     return tomorrow.toISOString().split('T')[0];
@@ -143,11 +149,6 @@ export default function BookingEditPage({
 
         console.log('Formatted booking data:', JSON.stringify(fetchedBooking, null, 2));
         setBooking(fetchedBooking);
-        setBookingData({
-          checkIn: fetchedBooking.checkIn.split('T')[0],
-          checkOut: fetchedBooking.checkOut.split('T')[0],
-          numberOfGuests: fetchedBooking.numberOfGuests,
-        });
       } catch (error) {
         console.error('Error in fetchBooking:', error);
         if (error instanceof Error) {
@@ -163,6 +164,36 @@ export default function BookingEditPage({
     fetchBooking();
   }, [resolvedParams.id, router, session]);
 
+  useEffect(() => {
+    if (booking) {
+      console.log('Raw booking dates:', {
+        checkIn: booking.checkIn,
+        checkOut: booking.checkOut
+      });
+
+      try {
+        // Simply split the date string to get YYYY-MM-DD format
+        const formattedCheckIn = booking.checkIn.split('T')[0];
+        const formattedCheckOut = booking.checkOut.split('T')[0];
+        
+        console.log('Formatted dates:', {
+          formattedCheckIn,
+          formattedCheckOut
+        });
+        
+        setBookingData(prevData => ({
+          ...prevData,
+          checkIn: formattedCheckIn,
+          checkOut: formattedCheckOut,
+          numberOfGuests: booking.numberOfGuests,
+        }));
+      } catch (error) {
+        console.error('Error formatting dates:', error);
+        console.error('Booking data:', booking);
+      }
+    }
+  }, [booking]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!session?.user) {
@@ -172,6 +203,28 @@ export default function BookingEditPage({
 
     try {
       setLoading(true);
+
+      // Create Date objects and set them to noon UTC to avoid timezone issues
+      const checkInDate = new Date(bookingData.checkIn);
+      const checkOutDate = new Date(bookingData.checkOut);
+      
+      checkInDate.setUTCHours(12, 0, 0, 0);
+      checkOutDate.setUTCHours(12, 0, 0, 0);
+
+      const formattedData = {
+        bookingId: resolvedParams.id,
+        checkIn: checkInDate.toISOString(),
+        checkOut: checkOutDate.toISOString(),
+        numberOfGuests: bookingData.numberOfGuests
+      };
+
+      console.log('Submitting booking with dates:', {
+        originalCheckIn: bookingData.checkIn,
+        originalCheckOut: bookingData.checkOut,
+        formattedCheckIn: formattedData.checkIn,
+        formattedCheckOut: formattedData.checkOut
+      });
+
       const response = await fetch('/api/graphql', {
         method: 'POST',
         headers: {
@@ -180,10 +233,7 @@ export default function BookingEditPage({
         body: JSON.stringify({
           query: UPDATE_BOOKING,
           variables: {
-            input: {
-              bookingId: resolvedParams.id,
-              ...bookingData,
-            },
+            input: formattedData,
           },
         }),
       });
@@ -237,8 +287,8 @@ export default function BookingEditPage({
               name="checkIn"
               required
               value={bookingData.checkIn}
-              onChange={(e) => setBookingData({ ...bookingData, checkIn: e.target.value })}
-              min={getTomorrowDate()}
+              onChange={(e) => setBookingData(prev => ({ ...prev, checkIn: e.target.value }))}
+              min={getMinDate(bookingData.checkIn)}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
@@ -253,8 +303,8 @@ export default function BookingEditPage({
               name="checkOut"
               required
               value={bookingData.checkOut}
-              onChange={(e) => setBookingData({ ...bookingData, checkOut: e.target.value })}
-              min={bookingData.checkIn || getTomorrowDate()}
+              onChange={(e) => setBookingData(prev => ({ ...prev, checkOut: e.target.value }))}
+              min={bookingData.checkIn}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
@@ -271,7 +321,7 @@ export default function BookingEditPage({
               min="1"
               max={booking.property.maxGuests}
               value={bookingData.numberOfGuests}
-              onChange={(e) => setBookingData({ ...bookingData, numberOfGuests: parseInt(e.target.value) })}
+              onChange={(e) => setBookingData(prev => ({ ...prev, numberOfGuests: parseInt(e.target.value) }))}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
             <p className="mt-1 text-sm text-gray-500">Maximum {booking.property.maxGuests} guests</p>
