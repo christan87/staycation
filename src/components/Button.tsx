@@ -2,7 +2,7 @@ import React from 'react';
 import { twMerge } from 'tailwind-merge';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'outline';
+  variant?: 'primary' | 'outline' | 'destructive';
   size?: 'sm' | 'md' | 'lg';
   fullWidth?: boolean;
 }
@@ -21,6 +21,7 @@ export const Button: React.FC<ButtonProps> = ({
   const variantClasses = {
     primary: 'text-white bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 border border-transparent disabled:bg-blue-400',
     outline: 'text-gray-700 bg-white hover:bg-gray-50 focus:ring-blue-500 border border-gray-300 disabled:bg-gray-100',
+    destructive: 'text-white bg-red-600 hover:bg-red-700 focus:ring-red-500 border border-transparent disabled:bg-red-400',
   };
 
   const sizeClasses = {
