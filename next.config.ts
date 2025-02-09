@@ -12,8 +12,8 @@ const nextConfig: NextConfig = {
   images: {
     domains: [
       'via.placeholder.com',
-      'res.cloudinary.com',  // Add Cloudinary domain
-      'picsum.photos'        // Add Picsum Photos domain
+      'res.cloudinary.com',
+      'picsum.photos'
     ],
     unoptimized: process.env.NODE_ENV === 'development',
   },
@@ -21,6 +21,9 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   swcMinify: true,
+  experimental: {
+    forceSwcTransforms: true
+  }
 };
 
 export default nextConfig;

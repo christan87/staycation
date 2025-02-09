@@ -9,10 +9,9 @@ import BookingStatusBadge from '@/components/booking/BookingStatusBadge';
 import Image from 'next/image';
 import Link from 'next/link';
 
-interface PageProps {
-  params: {
-    id: string;
-  };
+type Props = {
+  params: { id: string }
+  searchParams: { [key: string]: string | string[] | undefined }
 }
 
 async function getBooking(id: string) {
@@ -22,105 +21,97 @@ async function getBooking(id: string) {
     return null;
   }
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/graphql`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.user.accessToken}`,
-    },
-    body: JSON.stringify({
-      query: GET_BOOKING,
-      variables: { id },
-    }),
-    cache: 'no-store',
-  });
+  try {
+    const response = await fetch(process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT!, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: GET_BOOKING,
+        variables: { id },
+      }),
+    });
 
-  const { data } = await res.json();
-  return data.booking;
+    const result = await response.json();
+    return result.data?.booking;
+  } catch (error) {
+    console.error('Error fetching booking:', error);
+    return null;
+  }
 }
 
-export default async function BookingPage({ params }: PageProps) {
+export default async function BookingPage({ params }: Props) {
   const booking = await getBooking(params.id);
 
   if (!booking) {
-    return notFound();
+    notFound();
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-3xl mx-auto">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <div className="relative h-64 w-full">
-            <Image
-              src={booking.property.images[0]?.url || '/placeholder.jpg'}
-              alt={booking.property.title}
-              fill
-              className="object-cover"
-            />
-          </div>
-
-          <div className="p-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+    <div className="max-w-2xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div className="px-4 py-5 sm:px-6">
+          <h3 className="text-lg leading-6 font-medium text-gray-900">
+            Booking Details
+          </h3>
+          <p className="mt-1 max-w-2xl text-sm text-gray-500">
+            Information about your booking.
+          </p>
+        </div>
+        
+        <div className="border-t border-gray-200 px-4 py-5 sm:px-6">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+            <div>
+              <dt className="text-sm font-medium text-gray-500">Property</dt>
+              <dd className="mt-1 text-sm text-gray-900">
+                <Link href={`/properties/${booking.property.id}`} className="text-blue-600 hover:text-blue-800">
                   {booking.property.title}
-                </h1>
-                <p className="mt-1 text-gray-500">
-                  {booking.property.location}
-                </p>
-              </div>
-              <BookingStatusBadge status={booking.status} />
+                </Link>
+              </dd>
             </div>
 
-            <div className="mt-6 border-t border-gray-200 pt-6">
-              <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Check-in</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {format(new Date(booking.checkIn), 'MMMM d, yyyy')}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Check-out</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {format(new Date(booking.checkOut), 'MMMM d, yyyy')}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Guests</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {booking.numberOfGuests}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Total Price</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    ${booking.totalPrice.toFixed(2)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Booking Date</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {format(new Date(booking.createdAt), 'MMMM d, yyyy')}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Payment Status</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {booking.paymentStatus}
-                  </dd>
-                </div>
-              </dl>
+            <div>
+              <dt className="text-sm font-medium text-gray-500">Status</dt>
+              <dd className="mt-1 text-sm text-gray-900">
+                <BookingStatusBadge status={booking.status} />
+              </dd>
             </div>
 
-            <div className="mt-6 border-t border-gray-200 pt-6">
-              <Link
-                href={`/properties/${booking.property.id}`}
-                className="text-primary-600 hover:text-primary-500 font-medium"
-              >
-                View Property Details
-              </Link>
+            <div>
+              <dt className="text-sm font-medium text-gray-500">Check-in</dt>
+              <dd className="mt-1 text-sm text-gray-900">
+                {format(new Date(booking.checkIn), 'PPP')}
+              </dd>
             </div>
+
+            <div>
+              <dt className="text-sm font-medium text-gray-500">Check-out</dt>
+              <dd className="mt-1 text-sm text-gray-900">
+                {format(new Date(booking.checkOut), 'PPP')}
+              </dd>
+            </div>
+
+            <div>
+              <dt className="text-sm font-medium text-gray-500">Number of Guests</dt>
+              <dd className="mt-1 text-sm text-gray-900">{booking.numberOfGuests}</dd>
+            </div>
+
+            <div>
+              <dt className="text-sm font-medium text-gray-500">Total Price</dt>
+              <dd className="mt-1 text-sm text-gray-900">${booking.totalPrice}</dd>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gray-50 px-4 py-5 sm:px-6">
+          <div className="flex justify-end space-x-4">
+            <Link
+              href={`/bookings/edit/${booking.id}`}
+              className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Edit Booking
+            </Link>
           </div>
         </div>
       </div>
