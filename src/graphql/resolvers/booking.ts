@@ -656,5 +656,47 @@ export const bookingResolvers = {
         };
       }
     },
+
+    deleteBooking: async (_: any, { bookingId }: { bookingId: string }, context: Context) => {
+      const session = await getServerSession(authOptions);
+      if (!session?.user?.email) {
+        throw new GraphQLError('Not authenticated');
+      }
+
+      const user = await UserModel.findOne({ email: session.user.email });
+      if (!user) {
+        throw new GraphQLError('User not found');
+      }
+
+      try {
+        const booking = await BookingModel.findById(bookingId);
+        if (!booking) {
+          throw new GraphQLError('Booking not found');
+        }
+
+        // Check authorization
+        if (booking.guest.toString() !== user._id.toString()) {
+          throw new GraphQLError('Not authorized to delete this booking');
+        }
+
+        // Only allow deletion of cancelled bookings
+        if (booking.status.toLowerCase() !== 'cancelled') {
+          throw new GraphQLError('Only cancelled bookings can be deleted');
+        }
+
+        // Delete the booking
+        await BookingModel.findByIdAndDelete(bookingId);
+
+        return {
+          success: true,
+          message: 'Booking deleted successfully'
+        };
+      } catch (error: any) {
+        return {
+          success: false,
+          message: error.message
+        };
+      }
+    },
   }
 };

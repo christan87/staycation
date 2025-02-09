@@ -76,4 +76,7 @@ type Mutation {
   
   # Complete a booking (typically after stay)
   completeBooking(bookingId: ID!): BookingResponse!
+  
+  # Delete a cancelled booking permanently
+  deleteBooking(bookingId: ID!): BookingResponse!
 }

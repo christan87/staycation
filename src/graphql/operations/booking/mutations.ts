@@ -71,3 +71,12 @@ export const CONFIRM_BOOKING = `
     }
   }
 `;
+
+export const DELETE_BOOKING = `
+  mutation DeleteBooking($bookingId: ID!) {
+    deleteBooking(bookingId: $bookingId) {
+      success
+      message
+    }
+  }
+`;

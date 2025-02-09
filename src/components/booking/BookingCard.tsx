@@ -8,6 +8,15 @@ import { Booking } from '@/types/booking';
 import BookingStatusBadge from './BookingStatusBadge';
 import { Button } from '@/components/Button';
 
+const DELETE_BOOKING = `
+  mutation DeleteBooking($bookingId: ID!) {
+    deleteBooking(bookingId: $bookingId) {
+      success
+      message
+    }
+  }
+`;
+
 interface BookingCardProps {
   booking: Booking;
   onDelete?: () => void;
@@ -72,6 +81,46 @@ export default function BookingCard({ booking, onDelete }: BookingCardProps) {
     }
   };
 
+  const handleDeleteBooking = async (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent the Link navigation
+    
+    if (!confirm('Are you sure you want to permanently delete this booking? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: DELETE_BOOKING,
+          variables: {
+            bookingId: booking.id,
+          },
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!result.data?.deleteBooking?.success) {
+        throw new Error(result.data?.deleteBooking?.message || 'Failed to delete booking');
+      }
+
+      // Call the onDelete callback if provided
+      if (onDelete) {
+        onDelete();
+      }
+
+      // Refresh the page to show updated state
+      router.refresh();
+    } catch (error) {
+      console.error('Error deleting booking:', error);
+      alert(error instanceof Error ? error.message : 'Failed to delete booking');
+    }
+  };
+
   const handleUpdate = (e: React.MouseEvent) => {
     e.preventDefault(); // Prevent the Link navigation
     router.push(`/bookings/edit/${booking.id}`);
@@ -131,13 +180,23 @@ export default function BookingCard({ booking, onDelete }: BookingCardProps) {
       
       {/* Action Buttons */}
       <div className="border-t border-gray-200 p-4 flex justify-end space-x-4">
-        <Button
-          onClick={handleDelete}
-          variant="destructive"
-          size="sm"
-        >
-          Cancel Booking
-        </Button>
+        {booking.status === 'CANCELLED' ? (
+          <Button
+            onClick={handleDeleteBooking}
+            variant="destructive"
+            size="sm"
+          >
+            Delete Booking
+          </Button>
+        ) : (
+          <Button
+            onClick={handleDelete}
+            variant="destructive"
+            size="sm"
+          >
+            Cancel Booking
+          </Button>
+        )}
         <Button
           onClick={handleUpdate}
           variant="outline"
