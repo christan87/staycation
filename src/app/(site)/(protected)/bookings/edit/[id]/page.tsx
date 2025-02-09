@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import { Container } from '@/components/Container';
 import { Button } from '@/components/Button';
 import { UPDATE_BOOKING } from '@/graphql/operations/booking/mutations';
+import { format, parseISO } from 'date-fns';
 
 interface Property {
   id: string;
@@ -48,20 +49,61 @@ export default function BookingEditPage({
     numberOfGuests: 1,
   });
 
+  const formatDateSafely = (dateString: string | undefined) => {
+    if (!dateString) return '';
+    try {
+      console.log('Formatting date:', dateString);
+      
+      // Handle Unix timestamp (milliseconds)
+      const timestamp = parseInt(dateString);
+      if (!isNaN(timestamp)) {
+        const date = new Date(timestamp);
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        const year = date.getFullYear();
+        return `${month}/${day}/${year}`;
+      }
+      
+      // Handle regular date string
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        console.error('Invalid date:', dateString);
+        return '';
+      }
+      
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const day = date.getDate().toString().padStart(2, '0');
+      const year = date.getFullYear();
+      
+      return `${month}/${day}/${year}`;
+    } catch (error) {
+      console.error('Error formatting date:', error, dateString);
+      return '';
+    }
+  };
+
   const getMinDate = (currentValue: string) => {
-    // If we're editing an existing booking and have the original dates, don't restrict them
     if (booking && currentValue) {
-      return undefined; // This removes the min restriction for existing dates
+      return undefined; 
     }
     
-    // For new dates, use tomorrow as the minimum
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     return tomorrow.toISOString().split('T')[0];
   };
 
   useEffect(() => {
-    // Redirect if not authenticated
+    if (booking) {
+      console.log('Booking dates:', {
+        checkIn: booking.checkIn,
+        checkOut: booking.checkOut,
+        checkInType: typeof booking.checkIn,
+        checkOutType: typeof booking.checkOut
+      });
+    }
+  }, [booking]);
+
+  useEffect(() => {
     if (!session?.user) {
       router.push('/login');
       return;
@@ -131,7 +173,6 @@ export default function BookingEditPage({
           throw new Error('Booking not found');
         }
 
-        // Log the booking data structure
         console.log('Booking data structure:', {
           id: result.data.booking.id,
           propertyId: result.data.booking.property.id,
@@ -139,7 +180,6 @@ export default function BookingEditPage({
           checkOut: result.data.booking.checkOut,
         });
 
-        // Format the booking data to match our interface
         const fetchedBooking = {
           ...result.data.booking,
           property: {
@@ -172,9 +212,8 @@ export default function BookingEditPage({
       });
 
       try {
-        // Simply split the date string to get YYYY-MM-DD format
-        const formattedCheckIn = booking.checkIn.split('T')[0];
-        const formattedCheckOut = booking.checkOut.split('T')[0];
+        const formattedCheckIn = formatDateSafely(booking.checkIn);
+        const formattedCheckOut = formatDateSafely(booking.checkOut);
         
         console.log('Formatted dates:', {
           formattedCheckIn,
@@ -204,7 +243,6 @@ export default function BookingEditPage({
     try {
       setLoading(true);
 
-      // Create Date objects and set them to noon UTC to avoid timezone issues
       const checkInDate = new Date(bookingData.checkIn);
       const checkOutDate = new Date(bookingData.checkOut);
       
@@ -248,7 +286,6 @@ export default function BookingEditPage({
         throw new Error(result.data?.updateBooking?.message || 'Failed to update booking');
       }
 
-      // Redirect to the bookings page after successful update
       router.push('/bookings');
       router.refresh();
     } catch (error) {
@@ -277,9 +314,9 @@ export default function BookingEditPage({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
+          <div className="mb-4">
             <label htmlFor="checkIn" className="block text-sm font-medium text-gray-700">
-              Check-in Date
+              Check-in Date <span className="text-red-500">({formatDateSafely(booking?.checkIn)})</span>
             </label>
             <input
               type="date"
@@ -293,9 +330,9 @@ export default function BookingEditPage({
             />
           </div>
 
-          <div>
+          <div className="mb-4">
             <label htmlFor="checkOut" className="block text-sm font-medium text-gray-700">
-              Check-out Date
+              Check-out Date <span className="text-red-500">({formatDateSafely(booking?.checkOut)})</span>
             </label>
             <input
               type="date"
