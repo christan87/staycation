@@ -15,7 +15,12 @@ const nextConfig: NextConfig = {
       'res.cloudinary.com',  // Add Cloudinary domain
       'picsum.photos'        // Add Picsum Photos domain
     ],
+    unoptimized: process.env.NODE_ENV === 'development',
   },
+  compress: true,
+  poweredByHeader: false,
+  reactStrictMode: true,
+  swcMinify: true,
 };
 
 export default nextConfig;

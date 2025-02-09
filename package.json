@@ -41,6 +41,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@netlify/plugin-nextjs": "^5.9.4",
     "@testing-library/jest-dom": "^6.6.3",
     "@types/bcryptjs": "^2.4.6",
     "@types/jest": "^29.5.14",
