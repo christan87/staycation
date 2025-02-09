@@ -8,10 +8,19 @@ import { GET_BOOKING } from '@/graphql/operations/booking/queries';
 import BookingStatusBadge from '@/components/booking/BookingStatusBadge';
 import Image from 'next/image';
 import Link from 'next/link';
+import { Metadata } from 'next';
 
-type Props = {
-  params: { id: string };
-  searchParams?: { [key: string]: string | string[] | undefined };
+type BookingPageProps = {
+  params: {
+    id: string;
+  };
+  searchParams?: Record<string, string | string[] | undefined>;
+}
+
+export async function generateMetadata({ params }: BookingPageProps): Promise<Metadata> {
+  return {
+    title: `Booking ${params.id}`,
+  };
 }
 
 async function getBooking(id: string) {
@@ -41,7 +50,7 @@ async function getBooking(id: string) {
   }
 }
 
-export default async function BookingPage({ params }: Props) {
+export default async function BookingPage({ params, searchParams }: BookingPageProps) {
   const booking = await getBooking(params.id);
 
   if (!booking) {
