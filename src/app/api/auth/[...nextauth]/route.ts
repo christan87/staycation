@@ -6,7 +6,7 @@ import dbConnect from '@/lib/mongodb';
 import { User } from '@/models/User';
 import bcrypt from 'bcryptjs';
 
-const authOptions: NextAuthOptions = {
+export const authConfig: NextAuthOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -32,21 +32,18 @@ const authOptions: NextAuthOptions = {
         await dbConnect();
 
         if (credentials.isRegistering === 'true') {
-          // Registration
+          // Registration logic
           if (!credentials.name) {
             throw new Error('Please enter a name');
           }
 
-          // Check if user already exists
           const existingUser = await User.findOne({ email: credentials.email });
           if (existingUser) {
             throw new Error('User already exists');
           }
 
-          // Hash password
           const hashedPassword = await bcrypt.hash(credentials.password, 12);
 
-          // Create new user
           const user = await User.create({
             name: credentials.name,
             email: credentials.email,
@@ -60,13 +57,12 @@ const authOptions: NextAuthOptions = {
             email: user.email,
           };
         } else {
-          // Login
+          // Login logic
           const user = await User.findOne({ email: credentials.email });
           if (!user) {
             throw new Error('No user found');
           }
 
-          // Check password
           const isValid = await bcrypt.compare(credentials.password, user.password);
           if (!isValid) {
             throw new Error('Invalid password');
@@ -203,9 +199,8 @@ const authOptions: NextAuthOptions = {
   },
 };
 
-const handler = NextAuth(authOptions);
-
+const handler = NextAuth(authConfig);
 export { handler as GET, handler as POST };
 
 // Export authOptions in a way that Next.js won't treat it as a route export
-export const getAuthOptions = () => authOptions;
+export const getAuthOptions = () => authConfig;
