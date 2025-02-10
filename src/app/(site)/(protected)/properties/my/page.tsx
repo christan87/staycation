@@ -5,7 +5,7 @@ import { GET_MY_PROPERTIES } from '@/graphql/operations/property/queries';
 import { useRouter } from 'next/navigation';
 import PropertyCard from '@/components/property/PropertyCard';
 import { useSession } from 'next-auth/react';
-import { Property, PropertyType } from '@/types/property';
+import { Property } from '@/types/property';
 
 // Terms and Conditions Overlay Component
 const TermsOverlay = ({ 
@@ -85,10 +85,9 @@ export default function MyPropertiesPage() {
   const [showTerms, setShowTerms] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { status } = useSession();
 
   useEffect(() => {
-    // Redirect if not authenticated
     if (status === 'unauthenticated') {
       router.push('/login');
       return;
@@ -97,7 +96,6 @@ export default function MyPropertiesPage() {
     if (status === 'authenticated') {
       const fetchProperties = async () => {
         try {
-          console.log('Fetching properties...');
           const response = await fetch('/api/graphql', {
             method: 'POST',
             headers: {
@@ -108,37 +106,16 @@ export default function MyPropertiesPage() {
             })
           });
 
-          // Log the response details for debugging
-          console.log('Response status:', response.status);
-          console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-          
-          const text = await response.text();
-          console.log('Raw response:', text);
-
-          // Only try to parse if we got a non-empty response
-          if (!text.trim()) {
-            throw new Error('Empty response from server');
+          if (!response.ok) {
+            throw new Error('Failed to fetch properties');
           }
 
-          // Check if we got an HTML response (error page)
-          if (text.trim().startsWith('<!DOCTYPE')) {
-            throw new Error('Received HTML instead of JSON. Server error occurred.');
+          const data = await response.json();
+          if (data.errors) {
+            throw new Error(data.errors[0].message);
           }
 
-          const result = JSON.parse(text);
-
-          if (result.errors) {
-            console.error('GraphQL Errors:', result.errors);
-            const errorMessage = result.errors[0]?.message || 'Failed to fetch properties';
-            throw new Error(errorMessage);
-          }
-
-          if (!result.data?.myProperties) {
-            console.error('No properties data in response:', result);
-            throw new Error('No properties data received');
-          }
-
-          setProperties(result.data.myProperties);
+          setProperties(data.data?.getMyProperties || []);
         } catch (err) {
           console.error('Error fetching properties:', err);
           setError(err instanceof Error ? err.message : 'An error occurred');
@@ -198,23 +175,25 @@ export default function MyPropertiesPage() {
     }
   };
 
-  if (status === 'loading' || loading) {
+  // Show loading state while session is loading or data is loading
+  if (status === 'loading' || (status === 'authenticated' && loading)) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Loading...</h1>
-        </div>
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
+  // Don't render anything if not authenticated
+  if (status === 'unauthenticated') {
+    return null;
+  }
+
+  // Show error state
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Error</h1>
-          <p className="mt-2 text-gray-600">{error}</p>
-        </div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-red-500 text-center py-8">{error}</div>
       </div>
     );
   }
@@ -235,7 +214,7 @@ export default function MyPropertiesPage() {
           Add New Property
         </button>
       </div>
-      
+
       {properties.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-gray-600 mb-4">You haven't listed any properties yet.</p>
