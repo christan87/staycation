@@ -85,7 +85,7 @@ export default function MyPropertiesPage() {
   const [showTerms, setShowTerms] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const router = useRouter();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -93,17 +93,19 @@ export default function MyPropertiesPage() {
       return;
     }
 
-    if (status === 'authenticated') {
+    if (status === 'authenticated' && session?.user?.email) {
       const fetchProperties = async () => {
         try {
           const response = await fetch('/api/graphql', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session?.user?.email}` // Add user email for authentication
             },
             body: JSON.stringify({
               query: GET_MY_PROPERTIES,
-            })
+            }),
+            credentials: 'include',
           });
 
           if (!response.ok) {
@@ -111,11 +113,23 @@ export default function MyPropertiesPage() {
           }
 
           const data = await response.json();
+          console.log('GraphQL Response:', data); // Debug log
+
           if (data.errors) {
+            console.error('GraphQL Errors:', data.errors);
             throw new Error(data.errors[0].message);
           }
 
-          setProperties(data.data?.getMyProperties || []);
+          // Check the actual data structure
+          const myProperties = data.data?.myProperties;
+          if (Array.isArray(myProperties)) {
+            setProperties(myProperties);
+            // Set isAuthorized if they have properties
+            setIsAuthorized(true);
+          } else {
+            console.error('Unexpected data structure:', data);
+            setError('Unexpected data structure received');
+          }
         } catch (err) {
           console.error('Error fetching properties:', err);
           setError(err instanceof Error ? err.message : 'An error occurred');
@@ -126,7 +140,7 @@ export default function MyPropertiesPage() {
 
       fetchProperties();
     }
-  }, [status, router]);
+  }, [status, session, router]);
 
   const handleCreateProperty = () => {
     if (isAuthorized) {
@@ -175,18 +189,13 @@ export default function MyPropertiesPage() {
     }
   };
 
-  // Show loading state while session is loading or data is loading
-  if (status === 'loading' || (status === 'authenticated' && loading)) {
+  // Show loading state
+  if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
-  }
-
-  // Don't render anything if not authenticated
-  if (status === 'unauthenticated') {
-    return null;
   }
 
   // Show error state

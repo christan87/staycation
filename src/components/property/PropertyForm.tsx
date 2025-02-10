@@ -29,7 +29,7 @@ const AMENITIES_OPTIONS = [
   'Workspace'
 ];
 
-export default function PropertyForm({ initialData, isLoading = false }: PropertyFormProps) {
+export function PropertyForm({ initialData, isLoading = false }: PropertyFormProps) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [showPetOptions, setShowPetOptions] = useState(false);
@@ -331,3 +331,5 @@ export default function PropertyForm({ initialData, isLoading = false }: Propert
     </form>
   );
 }
+
+export default PropertyForm;

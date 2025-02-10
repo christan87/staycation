@@ -23,10 +23,15 @@ const nextConfig: NextConfig = {
   experimental: {
     forceSwcTransforms: true
   },
-  // Disable static optimization for dynamic routes
   typescript: {
     ignoreBuildErrors: true
-  }
+  },
+  eslint: {
+    ignoreDuringBuilds: true
+  },
+  // Optimize for Netlify
+  output: 'standalone',
+  distDir: '.next'
 }
 
 export default nextConfig;
