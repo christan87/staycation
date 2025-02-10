@@ -1,13 +1,14 @@
 import NextAuth from 'next-auth';
-import type { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import FacebookProvider from 'next-auth/providers/facebook';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import dbConnect from '@/lib/mongodb';
 import { User } from '@/models/User';
 import bcrypt from 'bcryptjs';
+import type { NextAuthOptions } from 'next-auth';
 
-export const authOptions: NextAuthOptions = {
+// Define auth options separately from the route
+const options: NextAuthOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -102,5 +103,13 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 };
 
-const handler = NextAuth(authOptions);
+// Create the handler
+const handler = NextAuth(options);
+
+// Export only the route handlers
 export { handler as GET, handler as POST };
+
+// Export options through a function to avoid route export issues
+export function getAuthOptions() {
+  return options;
+}
