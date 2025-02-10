@@ -1,13 +1,12 @@
-import NextAuth from 'next-auth';
+import NextAuth, { type NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import FacebookProvider from 'next-auth/providers/facebook';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import type { NextAuthOptions } from 'next-auth';
 import dbConnect from '@/lib/mongodb';
 import { User } from '@/models/User';
 import bcrypt from 'bcryptjs';
 
-export const authOptions: NextAuthOptions = {
+const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -82,9 +81,10 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
-  session: {
-    strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+  pages: {
+    signIn: '/login',
+    error: '/login',
+    signOut: '/login',
   },
   callbacks: {
     async signIn({ user, account, profile }) {
@@ -190,20 +190,22 @@ export const authOptions: NextAuthOptions = {
       return baseUrl;
     },
   },
-  pages: {
-    signIn: '/login',
-    error: '/login', // Redirect to login page on error
-    signOut: '/login', // Redirect to login page after sign out
+  session: {
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
+  secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV === 'development',
   events: {
     async signIn({ user }) {
       console.log('User signed in:', user);
     },
   },
-  debug: process.env.NODE_ENV === 'development',
-  secret: process.env.NEXTAUTH_SECRET,
 };
 
 const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };
+
+// Export authOptions in a way that Next.js won't treat it as a route export
+export const getAuthOptions = () => authOptions;
