@@ -6,9 +6,10 @@ import { PropertyType } from '../../types/property';
 import ImageUpload from './ImageUpload';
 import { CREATE_PROPERTY, UPDATE_PROPERTY } from '@/graphql/operations/property/mutations';
 
-interface PropertyFormProps {
+export interface PropertyFormProps {
   initialData?: any;
   isLoading?: boolean;
+  onSubmit?: (formData: any) => Promise<void>;
 }
 
 const AMENITIES_OPTIONS = [
@@ -29,8 +30,10 @@ const AMENITIES_OPTIONS = [
   'Workspace'
 ];
 
-export function PropertyForm({ initialData, isLoading = false }: PropertyFormProps) {
+const PropertyForm = ({ initialData, isLoading = false, onSubmit }: PropertyFormProps) => {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showPetOptions, setShowPetOptions] = useState(false);
   const [formData, setFormData] = useState({
@@ -78,16 +81,25 @@ export function PropertyForm({ initialData, isLoading = false }: PropertyFormPro
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setError(null);
     setSubmitting(true);
 
     try {
+      if (onSubmit) {
+        await onSubmit(formData);
+        return;
+      }
+
+      // Default form submission logic
+      const mutation = initialData ? UPDATE_PROPERTY : CREATE_PROPERTY;
       const response = await fetch('/api/graphql', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          query: initialData ? UPDATE_PROPERTY : CREATE_PROPERTY,
+          query: mutation,
           variables: {
             input: {
               ...(initialData && { id: initialData.id }),
@@ -123,10 +135,11 @@ export function PropertyForm({ initialData, isLoading = false }: PropertyFormPro
 
       router.push('/properties');
       router.refresh();
-    } catch (error) {
-      console.error('Error updating property:', error);
-      alert(error instanceof Error ? error.message : 'Failed to update property. Please try again.');
+    } catch (err) {
+      console.error('Error submitting form:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
+      setLoading(false);
       setSubmitting(false);
     }
   };
