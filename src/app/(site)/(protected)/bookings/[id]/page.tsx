@@ -1,126 +1,183 @@
-'use server';
+'use client';
 
-import { notFound } from 'next/navigation';
-import { getServerSession } from 'next-auth';
-import { format } from 'date-fns';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { notFound, redirect, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { format, parseISO } from 'date-fns';
 import { GET_BOOKING } from '@/graphql/operations/booking/queries';
 import BookingStatusBadge from '@/components/booking/BookingStatusBadge';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Metadata } from 'next';
+import { useEffect, useState } from 'react';
+import { use } from 'react';
+import { BookingStatus } from '@/types/booking';
 
-type BookingPageProps = {
-  params: {
-    id: string;
+interface BookingPageProps {
+  params: Promise<{ id: string }>;
+}
+
+interface Property {
+  id: string;
+  title: string;
+  price: number;
+  maxGuests: number;
+  images: { url: string }[];
+  location: {
+    address: string;
+    city: string;
+    state: string;
+    country: string;
+    zipCode: string;
   };
-  searchParams?: Record<string, string | string[] | undefined>;
 }
 
-export async function generateMetadata({ params }: BookingPageProps): Promise<Metadata> {
-  return {
-    title: `Booking ${params.id}`,
-  };
+interface Booking {
+  id: string;
+  property: Property;
+  checkIn: string;
+  checkOut: string;
+  numberOfGuests: number;
+  totalPrice: number;
+  status: BookingStatus;
 }
 
-async function getBooking(id: string) {
-  const session = await getServerSession(authOptions);
-  
-  if (!session) {
-    return null;
+export default function BookingPage({ params }: BookingPageProps) {
+  const resolvedParams = use(params);
+  const router = useRouter();
+  const { data: session, status } = useSession();
+  const [booking, setBooking] = useState<Booking | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+      return;
+    }
+
+    const fetchBooking = async () => {
+      try {
+        const response = await fetch('/api/graphql', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: GET_BOOKING,
+            variables: { id: resolvedParams.id },
+          }),
+        });
+
+        const result = await response.json();
+        
+        if (result.errors) {
+          console.error('GraphQL errors:', result.errors);
+          throw new Error(result.errors[0].message);
+        }
+
+        if (!result.data?.booking) {
+          throw new Error('Booking not found');
+        }
+
+        setBooking(result.data.booking);
+      } catch (error) {
+        console.error('Error fetching booking:', error);
+        router.push('/bookings');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (status === 'authenticated') {
+      fetchBooking();
+    }
+  }, [resolvedParams.id, router, status]);
+
+  if (loading) {
+    return <div>Loading...</div>;
   }
-
-  try {
-    const response = await fetch(process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT!, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        query: GET_BOOKING,
-        variables: { id },
-      }),
-    });
-
-    const result = await response.json();
-    return result.data?.booking;
-  } catch (error) {
-    console.error('Error fetching booking:', error);
-    return null;
-  }
-}
-
-export default async function BookingPage({ params, searchParams }: BookingPageProps) {
-  const booking = await getBooking(params.id);
 
   if (!booking) {
-    notFound();
+    return notFound();
   }
 
+  const formatDate = (dateString: string) => {
+    try {
+      // Try parsing as ISO string first
+      const date = parseISO(dateString);
+      return format(date, 'PPP');
+    } catch (error) {
+      // If that fails, try parsing as timestamp
+      const timestamp = parseInt(dateString);
+      if (!isNaN(timestamp)) {
+        return format(new Date(timestamp), 'PPP');
+      }
+      console.error('Invalid date format:', dateString);
+      return 'Invalid date';
+    }
+  };
+
   return (
-    <div className="max-w-2xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-        <div className="px-4 py-5 sm:px-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900">
-            Booking Details
-          </h3>
-          <p className="mt-1 max-w-2xl text-sm text-gray-500">
-            Information about your booking.
-          </p>
+    <div className="container mx-auto px-4 py-8 text-slate-900">
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="flex justify-between items-start mb-6">
+          <h1 className="text-2xl font-semibold">Booking Details</h1>
+          <BookingStatusBadge status={booking.status as BookingStatus} />
         </div>
-        
-        <div className="border-t border-gray-200 px-4 py-5 sm:px-6">
-          <div className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Property</dt>
-              <dd className="mt-1 text-sm text-gray-900">
-                <Link href={`/properties/${booking.property.id}`} className="text-blue-600 hover:text-blue-800">
-                  {booking.property.title}
-                </Link>
-              </dd>
-            </div>
 
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Status</dt>
-              <dd className="mt-1 text-sm text-gray-900">
-                <BookingStatusBadge status={booking.status} />
-              </dd>
-            </div>
+        <div className="grid md:grid-cols-2 gap-8">
+          <div>
+            <h2 className="text-xl font-semibold mb-4">{booking.property.title}</h2>
+            {booking.property.images[0] && (
+              <div className="relative h-64 w-full mb-4">
+                <Image
+                  src={booking.property.images[0].url}
+                  alt={booking.property.title}
+                  fill
+                  className="rounded-lg object-cover"
+                />
+              </div>
+            )}
 
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Check-in</dt>
-              <dd className="mt-1 text-sm text-gray-900">
-                {format(new Date(booking.checkIn), 'PPP')}
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Check-out</dt>
-              <dd className="mt-1 text-sm text-gray-900">
-                {format(new Date(booking.checkOut), 'PPP')}
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Number of Guests</dt>
-              <dd className="mt-1 text-sm text-gray-900">{booking.numberOfGuests}</dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Total Price</dt>
-              <dd className="mt-1 text-sm text-gray-900">${booking.totalPrice}</dd>
+            <div className="space-y-2">
+              <p>
+                <span className="font-medium">Location: </span>
+                {booking.property.location.address}, {booking.property.location.city},{' '}
+                {booking.property.location.state} {booking.property.location.zipCode},{' '}
+                {booking.property.location.country}
+              </p>
             </div>
           </div>
-        </div>
 
-        <div className="bg-gray-50 px-4 py-5 sm:px-6">
-          <div className="flex justify-end space-x-4">
-            <Link
-              href={`/bookings/edit/${booking.id}`}
-              className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Edit Booking
-            </Link>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Booking Information</h3>
+              <div className="space-y-2">
+                <p>
+                  <span className="font-medium">Check-in: </span>
+                  {formatDate(booking.checkIn)}
+                </p>
+                <p>
+                  <span className="font-medium">Check-out: </span>
+                  {formatDate(booking.checkOut)}
+                </p>
+                <p>
+                  <span className="font-medium">Guests: </span>
+                  {booking.numberOfGuests}
+                </p>
+                <p>
+                  <span className="font-medium">Total Price: </span>
+                  ${booking.totalPrice}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex space-x-4">
+              <Link
+                href={`/bookings/edit/${booking.id}`}
+                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+              >
+                Edit Booking
+              </Link>
+            </div>
           </div>
         </div>
       </div>

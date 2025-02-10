@@ -8,7 +8,13 @@ export const GET_BOOKING = `
         images {
           url
         }
-        location
+        location {
+          address
+          city
+          state
+          country
+          zipCode
+        }
         price
       }
       guest {
