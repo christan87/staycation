@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
 
-// Import the client component dynamically
+// Import the client component dynamicallyt
 const ClientPage = dynamic(
   () => import('./ClientPage'),
   {
