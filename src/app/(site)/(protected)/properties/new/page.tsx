@@ -6,10 +6,10 @@ import { useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
-// Import the client component dynamically
+// Import the client component dynamically with no SSR
 const ClientPage = dynamic(
   () => import('./ClientPage'),
-  {
+  { 
     ssr: false,
     loading: () => (
       <div className="flex justify-center items-center min-h-screen">

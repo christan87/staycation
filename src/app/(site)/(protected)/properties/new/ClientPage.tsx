@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import PropertyForm, { PropertyFormProps } from '@/components/property/PropertyForm';
@@ -11,10 +11,27 @@ export default function ClientPage() {
   const { data: session, status } = useSession();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  // Redirect if not authenticated
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && status === 'unauthenticated') {
+      router.push('/login');
+    }
+  }, [status, router, mounted]);
+
+  if (!mounted || status === 'loading') {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   if (status === 'unauthenticated') {
-    router.push('/login');
     return null;
   }
 
@@ -51,19 +68,11 @@ export default function ClientPage() {
     } catch (err) {
       console.error('Error creating property:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
-      throw err; // Re-throw to let PropertyForm handle the error state
+      throw err;
     } finally {
       setLoading(false);
     }
   };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
