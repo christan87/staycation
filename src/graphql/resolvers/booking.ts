@@ -3,7 +3,7 @@ import { IBooking, IBookingModel, BookingModel } from '@/models/Booking';
 import mongoose from 'mongoose';
 import { getServerSession } from 'next-auth';
 import { Session } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { User as UserModel } from '@/models/User';
 
 interface Context {

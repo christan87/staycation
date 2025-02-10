@@ -1,6 +1,6 @@
 import { GraphQLError } from 'graphql';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { Context } from '../types/context';
 import { Property, IProperty } from '@/models/Property';
 import { User, IUser } from '@/models/User';

@@ -1,7 +1,7 @@
 import { createYoga } from 'graphql-yoga';
 import { createSchema } from 'graphql-yoga';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import { typeDefs } from '@/graphql/schemas/schema';
 import resolvers from '@/graphql/resolvers';

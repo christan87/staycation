@@ -8,8 +8,8 @@
  */
 
 import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { authOptions } from './api/auth/[...nextauth]/route';
 import Link from 'next/link';
 import { Container } from '@/components/Container';
 import { Button } from '@/components/Button';
