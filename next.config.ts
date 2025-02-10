@@ -15,7 +15,7 @@ const nextConfig: NextConfig = {
       'res.cloudinary.com',
       'picsum.photos'
     ],
-    unoptimized: process.env.NODE_ENV === 'development',
+    unoptimized: false,
   },
   compress: true,
   poweredByHeader: false,
@@ -23,6 +23,6 @@ const nextConfig: NextConfig = {
   experimental: {
     forceSwcTransforms: true
   }
-};
+}
 
 export default nextConfig;
