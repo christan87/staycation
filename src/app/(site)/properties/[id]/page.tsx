@@ -5,7 +5,7 @@ import { GET_PROPERTY } from '@/graphql/operations/property/queries';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { getServerSession } from 'next-auth';
-import { getAuthOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 
 interface PageProps {
@@ -15,7 +15,7 @@ interface PageProps {
 export default async function PropertyPage({ params }: PageProps) {
   const resolvedParams = await params;
   
-  const session = await getServerSession(getAuthOptions());
+  const session = await getServerSession(authOptions);
   if (!session?.user) {
     redirect('/login');
   }
