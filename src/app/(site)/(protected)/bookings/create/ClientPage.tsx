@@ -6,7 +6,6 @@ import { useSession } from 'next-auth/react';
 import { Container } from '@/components/Container';
 import { Button } from '@/components/Button';
 import { GET_PROPERTIES } from '@/graphql/operations/property/queries';
-import dynamic from 'next/dynamic';
 
 interface Property {
   id: string;
@@ -20,14 +19,21 @@ interface Property {
   description: string;
 }
 
-function ClientPageContent() {
+export default function ClientPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
     if (status === 'unauthenticated') {
       router.push('/login');
       return;
@@ -36,7 +42,7 @@ function ClientPageContent() {
     if (status === 'authenticated') {
       fetchProperties();
     }
-  }, [status, router]);
+  }, [status, mounted, router]);
 
   const fetchProperties = async () => {
     try {
@@ -66,6 +72,8 @@ function ClientPageContent() {
       setLoading(false);
     }
   };
+
+  if (!mounted) return null;
 
   return (
     <Container>
@@ -118,8 +126,3 @@ function ClientPageContent() {
     </Container>
   );
 }
-
-// Export a dynamically imported version of the component with SSR disabled
-export default dynamic(() => Promise.resolve(ClientPageContent), {
-  ssr: false,
-});
