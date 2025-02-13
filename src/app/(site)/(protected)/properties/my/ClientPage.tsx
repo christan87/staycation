@@ -23,7 +23,7 @@ function TermsOverlayComponent({
     const [hasRead, setHasRead] = useState(false);
     return { hasRead, setHasRead };
   }
-
+//
   // Use the state inside the component
   const { hasRead, setHasRead } = useTermsState();
 
