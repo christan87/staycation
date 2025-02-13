@@ -1,7 +1,7 @@
-import type { NextConfig } from "next";
-import path from 'path';
+const path = require('path');
 
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
@@ -21,17 +21,15 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   experimental: {
-    forceSwcTransforms: true
+    forceSwcTransforms: true,
+    serverActions: true // Enable Server Actions
   },
   typescript: {
     ignoreBuildErrors: true
   },
   eslint: {
     ignoreDuringBuilds: true
-  },
-  // Optimize for Netlify
-  output: 'standalone',
-  distDir: '.next'
-}
+  }
+};
 
-export default nextConfig;
+module.exports = nextConfig;

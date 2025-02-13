@@ -2,22 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-rgb: 255, 255, 255;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
+    --foreground: #000000;
+    --background: #ffffff;
+    --foreground-rgb: 0, 0, 0;
+    --background-rgb: 255, 255, 255;
+  }
+
+  .dark {
+    --foreground: #ededed;
+    --background: #0a0a0a;
     --background-rgb: 10, 10, 10;
     --foreground-rgb: 237, 237, 237;
   }
 }
 
+@layer components {
+  .container {
+    @apply mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl;
+  }
+}
+
 body {
-  color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-rgb));
-  font-family: Arial, Helvetica, sans-serif;
+  @apply text-gray-900 bg-white min-h-screen;
 }
 
 /* Form input overrides */
@@ -28,6 +36,5 @@ input[type="email"],
 input[type="password"],
 textarea,
 select {
-  color: rgb(15, 23, 42) !important; /* slate-900 */
-  background-color: white !important;
+  @apply text-slate-900 bg-white;
 }

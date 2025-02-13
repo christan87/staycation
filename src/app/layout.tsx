@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { NextAuthProvider } from "@/providers/NextAuthProvider";
+import { cn } from '@/lib/utils';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -16,12 +17,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
+    <html lang="en" className="h-full">
+      <body className={cn(
+        inter.className,
+        'min-h-screen bg-background text-foreground antialiased'
+      )}>
         <NextAuthProvider>
-          <main className="min-h-screen bg-gray-50">
-            {children}
-          </main>
+          {children}
         </NextAuthProvider>
       </body>
     </html>
