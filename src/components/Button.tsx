@@ -1,10 +1,12 @@
 import React from 'react';
 import { twMerge } from 'tailwind-merge';
+import Link from 'next/link';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'outline' | 'destructive';
   size?: 'sm' | 'md' | 'lg';
   fullWidth?: boolean;
+  href?: string;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -14,6 +16,7 @@ export const Button: React.FC<ButtonProps> = ({
   fullWidth = false,
   className,
   disabled,
+  href,
   ...props
 }) => {
   const baseClasses = 'inline-flex items-center justify-center font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors';
@@ -30,19 +33,25 @@ export const Button: React.FC<ButtonProps> = ({
     lg: 'px-6 py-3 text-base',
   };
 
-  const widthClass = fullWidth ? 'w-full' : '';
-  const disabledClass = disabled ? 'cursor-not-allowed opacity-50' : '';
+  const classes = twMerge(
+    baseClasses,
+    variantClasses[variant],
+    sizeClasses[size],
+    fullWidth ? 'w-full' : '',
+    className
+  );
+
+  if (href) {
+    return (
+      <Link href={href} className={classes}>
+        {children}
+      </Link>
+    );
+  }
 
   return (
     <button
-      className={twMerge(
-        baseClasses,
-        variantClasses[variant],
-        sizeClasses[size],
-        widthClass,
-        disabledClass,
-        className
-      )}
+      className={classes}
       disabled={disabled}
       {...props}
     >
