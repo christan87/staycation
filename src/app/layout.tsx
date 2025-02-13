@@ -3,7 +3,8 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { NextAuthProvider } from "@/providers/NextAuthProvider";
 import { cn } from '@/lib/utils';
-//
+import ErrorBoundary from '@/components/ErrorBoundary';
+
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
@@ -23,7 +24,9 @@ export default function RootLayout({
         'min-h-screen bg-background text-foreground antialiased'
       )}>
         <NextAuthProvider>
-          {children}
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
         </NextAuthProvider>
       </body>
     </html>
