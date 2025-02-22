@@ -8,10 +8,11 @@
   NEXT_TELEMETRY_DISABLED = "1"
 
 [[plugins]]
-  package = "@netlify/plugin-nextjs"
+  package = "@opennextjs/netlify"
 
 [functions]
   node_bundler = "esbuild"
+  included_files = ["!node_modules/sharp/**/*"]
 
 [[redirects]]
   from = "/_next/static/*"
