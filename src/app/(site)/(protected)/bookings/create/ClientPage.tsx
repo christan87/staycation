@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Container } from '@/components/Container';
 import { Button } from '@/components/Button';
@@ -21,7 +21,7 @@ interface Property {
 
 export default function ClientPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const pathname = usePathname();
   const { data: session, status } = useSession();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,17 +34,23 @@ export default function ClientPage() {
   useEffect(() => {
     if (!mounted) return;
 
-    if (status === 'unauthenticated') {
-      router.push('/login');
-      return;
-    }
-    
-    if (status === 'authenticated') {
-      fetchProperties();
-    }
+    const checkAuth = async () => {
+      if (status === 'unauthenticated') {
+        router.push('/login');
+        return;
+      }
+      
+      if (status === 'authenticated') {
+        await fetchProperties();
+      }
+    };
+
+    checkAuth();
   }, [status, mounted, router]);
 
   const fetchProperties = async () => {
+    if (!mounted) return;
+    
     try {
       setLoading(true);
       const res = await fetch('/api/graphql', {
@@ -55,17 +61,12 @@ export default function ClientPage() {
         body: JSON.stringify({
           query: GET_PROPERTIES,
         }),
-        credentials: 'include',
       });
 
-      const response = await res.json();
-      
-      if (response.errors) {
-        console.error('GraphQL Error:', response.errors);
-        throw new Error(response.errors[0].message);
+      const data = await res.json();
+      if (data.data?.properties) {
+        setProperties(data.data.properties);
       }
-      
-      setProperties(response.data?.properties || []);
     } catch (error) {
       console.error('Error fetching properties:', error);
     } finally {
@@ -73,7 +74,9 @@ export default function ClientPage() {
     }
   };
 
-  if (!mounted) return null;
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <Container>
