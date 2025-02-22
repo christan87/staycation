@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { usePathname } from 'next/navigation';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -12,7 +11,7 @@ interface ErrorBoundaryState {
   error?: Error;
 }
 
-export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
@@ -36,7 +35,10 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
               {this.state.error?.message || 'An unexpected error occurred'}
             </p>
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                this.setState({ hasError: false });
+                window.location.reload();
+              }}
               className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors"
             >
               Try again
@@ -50,13 +52,4 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 }
 
-// Wrapper component to use hooks
-export default function ErrorBoundaryWrapper({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-
-  return (
-    <ErrorBoundary key={pathname}>
-      {children}
-    </ErrorBoundary>
-  );
-}
+export default ErrorBoundary;
