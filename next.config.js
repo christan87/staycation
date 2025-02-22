@@ -10,26 +10,16 @@ const nextConfig = {
     return config;
   },
   images: {
-    domains: [
-      'via.placeholder.com',
-      'res.cloudinary.com',
-      'picsum.photos'
-    ],
-    unoptimized: false,
+    unoptimized: true,
+    domains: ['res.cloudinary.com'],
   },
-  compress: true,
-  poweredByHeader: false,
-  reactStrictMode: true,
-  experimental: {
-    forceSwcTransforms: true,
-    serverActions: true // Enable Server Actions
-  },
+  output: 'standalone',
   typescript: {
-    ignoreBuildErrors: true
+    ignoreBuildErrors: true,
   },
   eslint: {
-    ignoreDuringBuilds: true
-  }
+    ignoreDuringBuilds: true,
+  },
 };
 
 module.exports = nextConfig;
