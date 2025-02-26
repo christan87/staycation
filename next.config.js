@@ -24,6 +24,8 @@ const nextConfig = {
     appDir: true,
     serverActions: true,
   },
+  // Add pageExtensions to ensure both app and pages directories work
+  pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
 };
 
 module.exports = nextConfig;
