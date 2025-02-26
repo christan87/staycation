@@ -20,9 +20,9 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Remove experimental appDir flag to prioritize Pages Router
   experimental: {
-    appDir: true,
-    serverActions: true,
+    serverActions: true
   },
   // Add pageExtensions to ensure both app and pages directories work
   pageExtensions: ['js', 'jsx', 'ts', 'tsx'],

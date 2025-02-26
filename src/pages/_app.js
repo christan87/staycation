@@ -1,10 +1,18 @@
 import '../app/globals.css'
-import { NextAuthProvider } from "@/providers/NextAuthProvider";
+import { NextAuthProvider } from "@/providers/NextAuthProvider"
+import dynamic from 'next/dynamic'
 
-export default function App({ Component, pageProps: { session, ...pageProps } }) {
+const ErrorBoundary = dynamic(
+  () => import('@/components/ErrorBoundary'),
+  { ssr: false }
+)
+
+export default function App({ Component, pageProps }) {
   return (
     <NextAuthProvider>
-      <Component {...pageProps} />
+      <ErrorBoundary>
+        <Component {...pageProps} />
+      </ErrorBoundary>
     </NextAuthProvider>
   )
 }
