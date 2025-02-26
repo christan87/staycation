@@ -3,9 +3,15 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { NextAuthProvider } from "@/providers/NextAuthProvider";
 import { cn } from '@/lib/utils';
-import ErrorBoundary from '@/components/ErrorBoundary';
+import dynamic from 'next/dynamic';
 
 const inter = Inter({ subsets: ['latin'] });
+
+// Dynamically import ErrorBoundary with no SSR
+const ErrorBoundary = dynamic(
+  () => import('@/components/ErrorBoundary'),
+  { ssr: false }
+);
 
 export const metadata: Metadata = {
   title: 'Staycation - Find Your Perfect Getaway',
