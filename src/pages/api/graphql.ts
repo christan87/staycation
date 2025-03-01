@@ -1,3 +1,4 @@
+import { NextApiRequest, NextApiResponse } from 'next';
 import { createYoga, createSchema } from 'graphql-yoga';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -52,11 +53,25 @@ const yoga = createYoga<Context>({
   multipart: false
 });
 
-// Export route handlers that conform to Next.js App Router types
-export async function GET(request: Request) {
-  return yoga.fetch(request);
-}
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Convert NextApiRequest to Request
+  const request = new Request(req.url!, {
+    method: req.method,
+    headers: new Headers(req.headers as any),
+    body: req.body ? JSON.stringify(req.body) : null,
+  });
 
-export async function POST(request: Request) {
-  return yoga.fetch(request);
+  const response = await yoga.fetch(request);
+  
+  // Set the response status
+  res.status(response.status);
+
+  // Set the response headers
+  response.headers.forEach((value, key) => {
+    res.setHeader(key, value);
+  });
+
+  // Send the response body
+  const body = await response.text();
+  res.send(body);
 }

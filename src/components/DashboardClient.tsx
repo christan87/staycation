@@ -1,19 +1,30 @@
 'use client';
 
 import { Button } from '@/components/Button';
-import { Session } from 'next-auth';
+
+interface SerializedSession {
+  user: {
+    name?: string | null;
+    email?: string | null;
+    id?: string | null;
+  } | null;
+  expires: string;
+}
 
 interface DashboardClientProps {
-  session: Session;
+  session: SerializedSession;
 }
 
 export function DashboardClient({ session }: DashboardClientProps) {
+  // Safely access the user's name with fallback
+  const userName = session?.user?.name || 'Guest';
+
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <h1 className="text-2xl font-semibold text-gray-900 mb-4">
-          Welcome {session.user?.name}
+          Welcome {userName}
         </h1>
         <p className="text-gray-600 mb-4">
           Your one-stop platform for managing and discovering amazing staycation properties.

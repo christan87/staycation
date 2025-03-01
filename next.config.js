@@ -2,7 +2,14 @@ const path = require('path');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  webpack: (config) => {
+  reactStrictMode: true,
+  swcMinify: true,
+  webpack: (config, { dev, isServer }) => {
+    // Only run in production and when not running on the server
+    if (!dev && !isServer) {
+      // Enable CSS optimization in production
+      config.optimization.minimize = true;
+    }
     config.resolve.alias = {
       ...config.resolve.alias,
       '@': path.join(__dirname, 'src'),
@@ -11,7 +18,7 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
-    domains: ['res.cloudinary.com'],
+    domains: ['res.cloudinary.com', 'localhost'],
   },
   output: 'standalone',
   typescript: {
@@ -20,11 +27,9 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Remove experimental appDir flag to prioritize Pages Router
   experimental: {
     serverActions: true
   },
-  // Add pageExtensions to ensure both app and pages directories work
   pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
 };
 

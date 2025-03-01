@@ -4,10 +4,12 @@
 
 @layer base {
   :root {
-    --foreground: #000000;
-    --background: #ffffff;
-    --foreground-rgb: 0, 0, 0;
-    --background-rgb: 255, 255, 255;
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+  }
+
+  body {
+    @apply bg-background text-foreground;
   }
 
   .dark {
@@ -22,10 +24,6 @@
   .container {
     @apply mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl;
   }
-}
-
-body {
-  @apply text-gray-900 bg-white min-h-screen;
 }
 
 /* Form input overrides */
