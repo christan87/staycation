@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import PropertyForm, { PropertyFormProps } from '@/components/property/PropertyForm';
 import { CREATE_PROPERTY } from '@/graphql/operations/property/mutations';
+import { print } from 'graphql/language/printer';
 
 export default function ClientPage() {
   const router = useRouter();
@@ -46,9 +47,28 @@ export default function ClientPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          query: CREATE_PROPERTY,
+          query: print(CREATE_PROPERTY.definitions[0]),
           variables: {
-            input: formData
+            input: {
+              title: formData.title,
+              description: formData.description,
+              price: parseFloat(formData.price),
+              maxGuests: parseInt(formData.maxGuests),
+              type: formData.type,
+              location: {
+                address: formData.address,
+                city: formData.city,
+                state: formData.state,
+                country: formData.country,
+                zipCode: formData.zipCode,
+                coordinates: formData.coordinates || null
+              },
+              amenities: formData.amenities,
+              images: formData.images,
+              petFriendly: formData.petFriendly,
+              allowsCats: formData.allowsCats,
+              allowsDogs: formData.allowsDogs
+            }
           }
         }),
         credentials: 'include',

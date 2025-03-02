@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { PropertyType } from '../../types/property';
 import ImageUpload from './ImageUpload';
 import { CREATE_PROPERTY, UPDATE_PROPERTY } from '@/graphql/operations/property/mutations';
+import { print } from 'graphql/language/printer';
 
 export interface PropertyFormProps {
   initialData?: any;
@@ -93,13 +94,16 @@ const PropertyForm = ({ initialData, isLoading = false, onSubmit }: PropertyForm
 
       // Default form submission logic
       const mutation = initialData ? UPDATE_PROPERTY : CREATE_PROPERTY;
+      // Convert the gql object to a string using the print function
+      const mutationString = print(mutation.definitions[0]);
+      
       const response = await fetch('/api/graphql', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          query: mutation,
+          query: mutationString,
           variables: {
             input: {
               ...(initialData && { id: initialData.id }),

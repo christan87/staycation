@@ -43,7 +43,7 @@ export const propertyResolvers = {
 
         console.log(`Finding property with ID: ${id}`);
         const property = await Property.findById(id)
-          .populate('host')
+          .populate('host', 'id name email image') // Explicitly include email
           .populate({
             path: 'reviews',
             populate: {
@@ -137,7 +137,7 @@ export const propertyResolvers = {
 
         const totalCount = await Property.countDocuments(query);
         const properties = await Property.find(query)
-          .populate('host')
+          .populate('host', 'id name email image') // Explicitly include email
           .limit(limit)
           .skip(offset)
           .sort({ createdAt: -1 })
@@ -180,7 +180,7 @@ export const propertyResolvers = {
         }
 
         const properties = await Property.find({ host: user._id })
-          .populate('host')
+          .populate('host', 'id name email image') // Explicitly include email
           .populate({
             path: 'reviews',
             populate: {
@@ -237,7 +237,7 @@ export const propertyResolvers = {
 
         const totalCount = await Property.countDocuments(searchQuery);
         const properties = await Property.find(searchQuery)
-          .populate('host')
+          .populate('host', 'id name email image') // Explicitly include email
           .limit(limit)
           .skip(offset)
           .sort({ createdAt: -1 })
@@ -320,7 +320,12 @@ export const propertyResolvers = {
         throw new GraphQLError('Property not found');
       }
 
-      if (property.host.toString() !== user._id.toString() && user.role !== 'ADMIN') {
+      // Check if user is the host (by ID or email) or an admin
+      const isHost = property.host.toString() === user._id.toString();
+      const isAdmin = user.role === 'ADMIN';
+      
+      if (!isHost && !isAdmin) {
+        console.log(`User ${user._id} (${user.email}) is not authorized to update property ${property._id}`);
         throw new GraphQLError('Not authorized to update this property');
       }
 
@@ -358,7 +363,12 @@ export const propertyResolvers = {
         throw new GraphQLError('Property not found');
       }
 
-      if (property.host.toString() !== user._id.toString() && user.role !== 'ADMIN') {
+      // Check if user is the host (by ID or email) or an admin
+      const isHost = property.host.toString() === user._id.toString();
+      const isAdmin = user.role === 'ADMIN';
+      
+      if (!isHost && !isAdmin) {
+        console.log(`User ${user._id} (${user.email}) is not authorized to delete property ${property._id}`);
         throw new GraphQLError('Not authorized to delete this property');
       }
 
@@ -369,44 +379,63 @@ export const propertyResolvers = {
 
       await Property.findByIdAndDelete(id);
 
-      return {
-        success: true,
-        message: 'Property deleted successfully'
-      };
+      // Return a boolean as specified in the schema
+      return true;
     },
 
     becomeHost: async (_: any, __: any, context: Context) => {
-      if (!context.session?.user?.email) {
-        throw new GraphQLError('Not authenticated');
-      }
+      try {
+        console.log('becomeHost resolver called with context:', {
+          session: context.session,
+          email: context.session?.user?.email
+        });
+        
+        if (!context.session?.user?.email) {
+          throw new GraphQLError('Not authenticated');
+        }
 
-      const user = await User.findOne({ email: context.session.user.email });
-      if (!user) {
-        throw new GraphQLError('User not found');
-      }
+        const user = await User.findOne({ email: context.session.user.email });
+        console.log('User found:', user ? { id: user._id, role: user.role } : 'No user found');
+        
+        if (!user) {
+          throw new GraphQLError('User not found');
+        }
 
-      if (user.role === 'HOST' || user.role === 'ADMIN') {
+        if (user.role === 'HOST' || user.role === 'ADMIN') {
+          console.log('User is already a host or admin');
+          return {
+            success: false,
+            message: 'User is already a host',
+            user: {
+              id: user._id.toString(),
+              role: user.role,
+              name: user.name,
+              email: user.email,
+              image: user.image
+            }
+          };
+        }
+
+        console.log('Updating user role to HOST');
+        user.role = 'HOST';
+        await user.save();
+        console.log('User role updated successfully');
+
         return {
-          success: false,
-          message: 'User is already a host',
+          success: true,
+          message: 'Successfully became a host',
           user: {
             id: user._id.toString(),
-            role: user.role
+            role: user.role,
+            name: user.name,
+            email: user.email,
+            image: user.image
           }
         };
+      } catch (error) {
+        console.error('Error in becomeHost resolver:', error);
+        throw new GraphQLError(error instanceof Error ? error.message : 'Unexpected error in becomeHost');
       }
-
-      user.role = 'HOST';
-      await user.save();
-
-      return {
-        success: true,
-        message: 'Successfully became a host',
-        user: {
-          id: user._id.toString(),
-          role: user.role
-        }
-      };
     }
   }
 };

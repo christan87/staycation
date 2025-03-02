@@ -1,5 +1,7 @@
 import { gql } from '@apollo/client';
 
+// Apollo Client gql template literals
+
 export const CREATE_PROPERTY = gql`
   mutation CreateProperty($input: CreatePropertyInput!) {
     createProperty(input: $input) {
@@ -41,7 +43,7 @@ export const CREATE_PROPERTY = gql`
         id
         rating
         comment
-        user {
+        guest {
           id
           name
           image
@@ -89,10 +91,7 @@ export const UPDATE_PROPERTY = gql`
 
 export const DELETE_PROPERTY = gql`
   mutation DeleteProperty($id: ID!) {
-    deleteProperty(id: $id) {
-      success
-      message
-    }
+    deleteProperty(id: $id)
   }
 `;
 

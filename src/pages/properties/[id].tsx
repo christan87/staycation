@@ -61,16 +61,8 @@ export default function PropertyPage({ property, error }: PropertyPageProps) {
 }
 
 export const getServerSideProps: GetServerSideProps = async ({ params, req, res }) => {
+  // Get session but don't require it for viewing properties
   const session = await getServerSession(req, res, authOptions);
-
-  if (!session?.user) {
-    return {
-      redirect: {
-        destination: '/login',
-        permanent: false,
-      },
-    };
-  }
 
   try {
     const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';

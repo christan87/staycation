@@ -47,7 +47,7 @@ export const authOptions: NextAuthOptions = {
             name: credentials.name,
             email: credentials.email,
             password: hashedPassword,
-            role: 'USER',
+            role: 'GUEST', // Use GUEST as the database role
           });
 
           return {
@@ -83,17 +83,129 @@ export const authOptions: NextAuthOptions = {
     signOut: '/login',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async signIn({ user, account, profile }) {
+      // Only process for OAuth providers
+      if (account && account.provider && (account.provider === 'google' || account.provider === 'facebook')) {
+        try {
+          await dbConnect();
+          
+          // Check if user already exists in our database
+          const existingUser = await User.findOne({ email: user.email });
+          
+          if (existingUser) {
+            // Update provider info if needed
+            if (!existingUser.provider || !existingUser.providerId) {
+              existingUser.provider = account.provider;
+              existingUser.providerId = account.providerAccountId;
+              await existingUser.save();
+              console.log(`Updated OAuth provider info for existing user: ${user.email}`);
+            }
+          } else {
+            // Create new user with OAuth info
+            await User.create({
+              name: user.name,
+              email: user.email,
+              image: user.image,
+              provider: account.provider,
+              providerId: account.providerAccountId,
+              role: 'GUEST', // Default role for new users
+              emailVerified: true // OAuth emails are verified
+            });
+            console.log(`Created new user from OAuth: ${user.email}`);
+          }
+        } catch (error) {
+          console.error('Error in signIn callback:', error);
+          // Still allow sign in even if our DB operations fail
+        }
+      }
+      return true;
+    },
+    async jwt({ token, user, trigger }) {
+      // If this is a sign-in event, user object is available
       if (user) {
         token.id = user.id;
-        token.role = user.role || 'USER';
+        token.email = user.email;
+        token.provider = user.provider;
+        
+        // Map database role to session role
+        if (user.role === 'GUEST') {
+          token.role = 'USER';
+        } else if (user.role === 'HOST' || user.role === 'ADMIN') {
+          token.role = user.role;
+        } else {
+          token.role = 'USER'; // Default fallback
+        }
+        console.log(`JWT callback - User ID: ${user.id}, Email: ${user.email}, Role: ${user.role}, Token role: ${token.role}`);
+      } 
+      
+      // On every JWT refresh, fetch the latest user data from the database
+      if (token?.id) {
+        try {
+          await dbConnect();
+          console.log(`Looking up user with ID: ${token.id}`);
+          
+          let currentUser = null;
+          
+          // Check if the ID is a valid MongoDB ObjectId
+          const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(token.id);
+          
+          if (isValidObjectId) {
+            // Try to find by _id if it's a valid ObjectId
+            currentUser = await User.findById(token.id).select('role');
+            console.log(`Lookup by ObjectId ${isValidObjectId ? 'succeeded' : 'failed'}`);
+          }
+          
+          // If not found or not a valid ObjectId, try by providerId (for OAuth users)
+          if (!currentUser) {
+            console.log(`Looking up by providerId: ${token.id}`);
+            currentUser = await User.findOne({ providerId: token.id }).select('role');
+            
+            if (!currentUser) {
+              // Also try by email if we have it
+              if (token.email) {
+                console.log(`Looking up by email: ${token.email}`);
+                currentUser = await User.findOne({ email: token.email }).select('role');
+              }
+            }
+          }
+          
+          if (currentUser) {
+            console.log(`JWT refresh - Found user with role: ${currentUser.role}`);
+            
+            // Update token with current role from database
+            if (currentUser.role === 'GUEST') {
+              token.role = 'USER';
+            } else if (currentUser.role === 'HOST' || currentUser.role === 'ADMIN') {
+              token.role = currentUser.role;
+            } else {
+              token.role = 'USER';
+            }
+          } else {
+            console.log(`JWT refresh - User not found in database: ${token.id}`);
+          }
+        } catch (error) {
+          console.error('Error fetching user in JWT callback:', error);
+        }
       }
+      
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.role = token.role as 'USER' | 'HOST' | 'ADMIN';
+        session.user.email = token.email as string || session.user.email;
+        console.log(`Session callback - Token ID: ${token.id}, Email: ${token.email}, Token role: ${token.role}`);
+        
+        // Ensure we only assign valid role types
+        if (token.role === 'HOST' || token.role === 'ADMIN' || token.role === 'USER') {
+          session.user.role = token.role;
+        } else {
+          console.log(`Session callback - Invalid role in token: ${token.role}, defaulting to USER`);
+          session.user.role = 'USER'; // Default fallback
+        }
+        console.log(`Session callback - Final session user role: ${session.user.role}`);
+      } else {
+        console.log('Session callback - No session.user object found');
       }
       return session;
     },

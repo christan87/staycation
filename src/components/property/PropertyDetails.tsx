@@ -13,7 +13,7 @@ interface PropertyDetailsProps {
 
 export default function PropertyDetails({ property }: PropertyDetailsProps) {
   const { data: session } = useSession();
-  const isOwner = session?.user?.id === property?.host?.id;
+  const isOwner = session?.user?.id === property?.host?.id || session?.user?.email === property?.host?.email;
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // If property is undefined or null, show a loading state

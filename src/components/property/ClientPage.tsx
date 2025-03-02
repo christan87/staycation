@@ -16,6 +16,12 @@ const BECOME_HOST_MUTATION = gql`
     becomeHost {
       success
       message
+      user {
+        id
+        role
+        name
+        email
+      }
     }
   }
 `;
@@ -97,6 +103,7 @@ const TermsOverlay = dynamic(() => Promise.resolve(TermsOverlayComponent), { ssr
 
 export default function ClientPage() {
   const [showTerms, setShowTerms] = useState(false);
+  // Initialize isAuthorized based on user role
   const [isAuthorized, setIsAuthorized] = useState(false);
   
   const router = useRouter();
@@ -115,28 +122,65 @@ export default function ClientPage() {
     }
   }, [status, router]);
 
+  // Check if user is already authorized to create properties
+  useEffect(() => {
+    console.log('Session in ClientPage:', session);
+    if (session?.user?.role === 'HOST' || session?.user?.role === 'ADMIN') {
+      console.log('User is authorized to create properties');
+      setIsAuthorized(true);
+    } else {
+      console.log('User is not authorized to create properties');
+    }
+  }, [session]);
+
   const handleCreateProperty = () => {
+    console.log('handleCreateProperty called, isAuthorized:', isAuthorized);
+    console.log('User role:', session?.user?.role);
+    
     if (isAuthorized) {
+      console.log('User is authorized, redirecting to /properties/new');
       router.push('/properties/new');
     } else {
+      console.log('User is not authorized, showing terms overlay');
       setShowTerms(true);
     }
   };
 
   const handleAcceptTerms = async () => {
     try {
+      console.log('Calling becomeHost mutation...');
       const { data } = await becomeHost();
+      console.log('becomeHost mutation response:', data);
       
       if (data?.becomeHost?.success) {
+        console.log('Successfully became a host, user data:', data.becomeHost.user);
+        // Update the session client-side to reflect the new role
+        if (session && data.becomeHost.user) {
+          session.user.role = data.becomeHost.user.role;
+        }
         setIsAuthorized(true);
         setShowTerms(false);
         router.push('/properties/new');
       } else {
+        console.warn('becomeHost returned success: false', data?.becomeHost?.message);
+        // If user is already a host, we can still proceed
+        if (data?.becomeHost?.message === 'User is already a host' && data?.becomeHost?.user?.role === 'HOST') {
+          console.log('User is already a host, redirecting to create property page');
+          setIsAuthorized(true);
+          setShowTerms(false);
+          router.push('/properties/new');
+          return;
+        }
         throw new Error(data?.becomeHost?.message || 'Failed to become a host');
       }
     } catch (err) {
       console.error('Error becoming host:', err);
-      // Handle error appropriately
+      // Show more detailed error message
+      if (err instanceof Error) {
+        alert(`Error becoming a host: ${err.message}. Please try again.`);
+      } else {
+        alert('Error becoming a host. Please try again.');
+      }
     }
   };
 

@@ -20,13 +20,15 @@ declare module 'next-auth' {
     email: string;
     image?: string;
     provider?: string;
-    role?: 'USER' | 'HOST' | 'ADMIN';
+    role?: 'GUEST' | 'HOST' | 'ADMIN';
   }
 }
 
 declare module 'next-auth/jwt' {
   interface JWT {
-    userId?: string;
+    id?: string;
+    userId?: string; // Keep for backward compatibility
+    email?: string;
     accessToken?: string;
     provider?: string;
     role?: 'USER' | 'HOST' | 'ADMIN';
