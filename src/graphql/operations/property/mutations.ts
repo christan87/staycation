@@ -1,4 +1,6 @@
-export const CREATE_PROPERTY = `
+import { gql } from '@apollo/client';
+
+export const CREATE_PROPERTY = gql`
   mutation CreateProperty($input: CreatePropertyInput!) {
     createProperty(input: $input) {
       id
@@ -24,6 +26,8 @@ export const CREATE_PROPERTY = `
       host {
         id
         name
+        email
+        image
       }
       maxGuests
       type
@@ -37,6 +41,11 @@ export const CREATE_PROPERTY = `
         id
         rating
         comment
+        user {
+          id
+          name
+          image
+        }
         createdAt
         updatedAt
       }
@@ -44,19 +53,58 @@ export const CREATE_PROPERTY = `
   }
 `;
 
-export const UPDATE_PROPERTY = `
+export const UPDATE_PROPERTY = gql`
   mutation UpdateProperty($input: UpdatePropertyInput!) {
     updateProperty(input: $input) {
       id
       title
       description
+      location {
+        address
+        city
+        state
+        country
+        zipCode
+        coordinates {
+          latitude
+          longitude
+        }
+      }
       price
+      images {
+        url
+        publicId
+      }
+      amenities
+      maxGuests
+      type
+      rating
+      petFriendly
+      allowsCats
+      allowsDogs
+      updatedAt
     }
   }
 `;
 
-export const DELETE_PROPERTY = `
+export const DELETE_PROPERTY = gql`
   mutation DeleteProperty($id: ID!) {
-    deleteProperty(id: $id)
+    deleteProperty(id: $id) {
+      success
+      message
+    }
+  }
+`;
+
+export const BECOME_HOST = gql`
+  mutation BecomeHost {
+    becomeHost {
+      success
+      message
+      user {
+        id
+        role
+      }
+    }
   }
 `;

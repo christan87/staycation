@@ -47,13 +47,14 @@ export const authOptions: NextAuthOptions = {
             name: credentials.name,
             email: credentials.email,
             password: hashedPassword,
-            role: 'GUEST',
+            role: 'USER',
           });
 
           return {
             id: user._id.toString(),
             name: user.name,
             email: user.email,
+            role: user.role,
           };
         } else {
           const user = await User.findOne({ email: credentials.email });
@@ -70,6 +71,7 @@ export const authOptions: NextAuthOptions = {
             id: user._id.toString(),
             name: user.name,
             email: user.email,
+            role: user.role,
           };
         }
       },
@@ -84,19 +86,32 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.role = user.role || 'USER';
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
+        session.user.role = token.role as 'USER' | 'HOST' | 'ADMIN';
       }
       return session;
     },
+    async redirect({ url, baseUrl }) {
+      // Handle redirect after sign in
+      if (url.startsWith('/')) return `${baseUrl}${url}`
+      else if (new URL(url).origin === baseUrl) return url
+      return baseUrl
+    }
   },
   session: {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   secret: process.env.NEXTAUTH_SECRET,
-};
+}
+
+// Ensure NEXTAUTH_URL is set in production
+if (process.env.VERCEL_URL && !process.env.NEXTAUTH_URL) {
+  process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_URL}`;
+}

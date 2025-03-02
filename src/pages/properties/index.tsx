@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
+import { useQuery } from '@apollo/client';
 import { GET_PROPERTIES } from '@/graphql/operations/property/queries';
 import PropertyList from '@/components/property/PropertyList';
 import { Button } from '@/components/Button';
@@ -9,64 +10,15 @@ import { Container } from '@/components/Container';
 export default function PropertiesPage() {
   const router = useRouter();
   const { data: session } = useSession();
-  const [properties, setProperties] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchProperties();
-  }, []);
-
-  const fetchProperties = async () => {
-    try {
-      setLoading(true);
-      const protocol = window.location.protocol;
-      const host = window.location.host;
-      const apiUrl = `${protocol}//${host}/api/graphql`;
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          ...(session?.user?.email && {
-            Authorization: `Bearer ${session.user.email}`
-          })
-        },
-        body: JSON.stringify({
-          query: GET_PROPERTIES,
-          variables: {
-            limit: 10,
-            offset: 0,
-            filter: {}
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
-      }
-
-      const result = await response.json();
-      
-      if (result.errors) {
-        throw new Error(result.errors[0]?.message || 'GraphQL Error');
-      }
-
-      if (result.data?.properties) {
-        setProperties(result.data.properties);
-      } else {
-        console.warn('No properties data in response:', result);
-        setProperties([]);
-      }
-    } catch (error) {
-      console.error('Error fetching properties:', error);
-      setProperties([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  
+  const { loading, error, data } = useQuery(GET_PROPERTIES, {
+    variables: {
+      limit: 10,
+      offset: 0,
+      filter: {}
+    },
+    fetchPolicy: 'network-only'
+  });
 
   const handleCreateProperty = () => {
     if (session) {
@@ -83,6 +35,16 @@ export default function PropertiesPage() {
       </div>
     </Container>
   );
+
+  if (error) return (
+    <Container>
+      <div className="py-8">
+        <div className="text-red-600">Error: {error.message}</div>
+      </div>
+    </Container>
+  );
+
+  const properties = data?.properties?.items || [];
 
   return (
     <Container>
@@ -111,7 +73,14 @@ export default function PropertiesPage() {
             Create Property
           </Button>
         </div>
-        <PropertyList properties={properties} />
+
+        {properties.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-xl text-gray-600">No properties available.</p>
+          </div>
+        ) : (
+          <PropertyList properties={properties} />
+        )}
       </div>
     </Container>
   );

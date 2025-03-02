@@ -6,6 +6,8 @@ import Head from 'next/head'
 import type { AppProps } from 'next/app'
 import type { Session } from 'next-auth'
 import Navigation from '@/components/Navigation'
+import { ApolloProvider } from '@apollo/client';
+import { client } from '@/lib/graphql-client';
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -31,18 +33,18 @@ export default function App({
   const getLayout = Component.getLayout ?? ((page) => page);
 
   return (
-    <>
-      <Head>
-        <title>Staycation - Find Your Perfect Getaway</title>
-        <meta name="description" content="Discover and book unique accommodations around the world." />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#ffffff" />
-        <meta name="color-scheme" content="light dark" />
-        <link rel="icon" href="/favicon.ico" />
-        <link rel="manifest" href="/manifest.json" />
-        <link rel="apple-touch-icon" href="/icon-192x192.png" />
-      </Head>
+    <ApolloProvider client={client}>
       <NextAuthProvider session={session}>
+        <Head>
+          <title>Staycation - Find Your Perfect Getaway</title>
+          <meta name="description" content="Discover and book unique accommodations around the world." />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <meta name="theme-color" content="#ffffff" />
+          <meta name="color-scheme" content="light dark" />
+          <link rel="icon" href="/favicon.ico" />
+          <link rel="manifest" href="/manifest.json" />
+          <link rel="apple-touch-icon" href="/icon-192x192.png" />
+        </Head>
         <ErrorBoundary>
           <div className={`${inter.className} min-h-screen bg-gray-50`}>
             <Navigation />
@@ -50,6 +52,6 @@ export default function App({
           </div>
         </ErrorBoundary>
       </NextAuthProvider>
-    </>
+    </ApolloProvider>
   )
 }

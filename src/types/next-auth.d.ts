@@ -10,6 +10,7 @@ declare module 'next-auth' {
       image?: string;
       accessToken?: string;
       provider?: string;
+      role?: 'USER' | 'HOST' | 'ADMIN';
     };
   }
 
@@ -19,6 +20,7 @@ declare module 'next-auth' {
     email: string;
     image?: string;
     provider?: string;
+    role?: 'USER' | 'HOST' | 'ADMIN';
   }
 }
 
@@ -27,5 +29,6 @@ declare module 'next-auth/jwt' {
     userId?: string;
     accessToken?: string;
     provider?: string;
+    role?: 'USER' | 'HOST' | 'ADMIN';
   }
 }

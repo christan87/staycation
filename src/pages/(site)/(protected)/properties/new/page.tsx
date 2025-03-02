@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 
 // Import the client component dynamically with no SSR
 const ClientPage = dynamic(
-  () => import('./ClientPage'),
+  () => import('../../../../../components/property/NewClientPage'),
   { 
     ssr: false,
     loading: () => (

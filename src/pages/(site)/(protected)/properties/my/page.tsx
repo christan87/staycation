@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense } from 'react';
-import ClientPage from './ClientPage';
+import ClientPage from '../../../../../components/property/ClientPage';
 
 export default function MyPropertiesPage() {
   return (

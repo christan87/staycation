@@ -107,15 +107,26 @@ type PropertyResponse {
   property: Property
 }
 
+type PropertyConnection {
+  items: [Property!]!
+  pageInfo: PageInfo
+}
+
+type PageInfo {
+  totalCount: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+}
+
 type Query {
   property(id: ID!): Property
   properties(
     limit: Int
     offset: Int
     filter: PropertyFilterInput
-  ): [Property!]!
+  ): PropertyConnection!
   myProperties: [Property!]!
-  searchProperties(query: String!): [Property!]!
+  searchProperties(query: String!): PropertyConnection!
 }
 
 input PropertyFilterInput {
