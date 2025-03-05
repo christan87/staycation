@@ -147,6 +147,47 @@ export const GET_PROPERTY_STRING = `
   }
 `;
 
+// Raw string version of the GET_PROPERTIES query for use with direct fetch calls
+export const GET_PROPERTIES_STRING = `
+  query GetProperties {
+    properties {
+      items {
+        id
+        title
+        description
+        price
+        images {
+          url
+          publicId
+        }
+        location {
+          address
+          city
+          state
+          country
+          zipCode
+          coordinates {
+            latitude
+            longitude
+          }
+        }
+        host {
+          id
+          name
+        }
+        maxGuests
+        type
+        rating
+      }
+      pageInfo {
+        totalCount
+        hasNextPage
+        hasPreviousPage
+      }
+    }
+  }
+`;
+
 export const GET_MY_PROPERTIES = gql`
   query GetMyProperties {
     myProperties {

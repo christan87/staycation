@@ -98,6 +98,8 @@ export const bookingResolvers = {
 
       // Transform the MongoDB document to match GraphQL schema
       const bookingObj = booking.toObject();
+      
+      // Ensure dates are properly formatted as ISO strings
       const formattedBooking = {
         ...bookingObj,
         id: booking._id.toString(),
@@ -109,6 +111,11 @@ export const bookingResolvers = {
           ...bookingObj.guest,
           id: booking.guest._id.toString(),
         },
+        // Format dates as ISO strings
+        checkIn: booking.checkIn instanceof Date ? booking.checkIn.toISOString() : booking.checkIn,
+        checkOut: booking.checkOut instanceof Date ? booking.checkOut.toISOString() : booking.checkOut,
+        createdAt: booking.createdAt instanceof Date ? booking.createdAt.toISOString() : booking.createdAt,
+        updatedAt: booking.updatedAt instanceof Date ? booking.updatedAt.toISOString() : booking.updatedAt,
         status: booking.status.toUpperCase(),
         paymentStatus: booking.paymentStatus.toUpperCase()
       };
@@ -190,12 +197,11 @@ export const bookingResolvers = {
     },
 
     propertyBookings: async (_: any, { propertyId }: { propertyId: string }, context: Context) => {
-      const session = await getServerSession(authOptions);
-      if (!session?.user?.email) {
+      if (!context.session?.user?.email) {
         throw new GraphQLError('Not authenticated');
       }
 
-      const user = await UserModel.findOne({ email: session.user.email });
+      const user = await UserModel.findOne({ email: context.session.user.email });
       if (!user) {
         throw new GraphQLError('User not found');
       }
@@ -210,19 +216,60 @@ export const bookingResolvers = {
         throw new GraphQLError('Not authorized to view these bookings');
       }
 
-      return BookingModel.find({ property: propertyId })
+      const bookings = await BookingModel.find({ property: propertyId })
         .populate<{ property: PopulatedProperty }>('property')
         .populate<{ guest: PopulatedGuest }>('guest')
         .sort({ checkIn: 1 });
+        
+      return bookings.map(booking => {
+        const bookingObj = booking.toObject();
+        return {
+          ...bookingObj,
+          id: booking._id.toString(),
+          property: {
+            ...bookingObj.property,
+            id: booking.property instanceof mongoose.Types.ObjectId 
+              ? booking.property.toString() 
+              : booking.property._id.toString()
+          },
+          guest: {
+            ...bookingObj.guest,
+            id: booking.guest instanceof mongoose.Types.ObjectId 
+              ? booking.guest.toString() 
+              : booking.guest._id.toString()
+          },
+          // Format dates as ISO strings
+          checkIn: booking.checkIn instanceof Date ? booking.checkIn.toISOString() : booking.checkIn,
+          checkOut: booking.checkOut instanceof Date ? booking.checkOut.toISOString() : booking.checkOut,
+          createdAt: booking.createdAt instanceof Date ? booking.createdAt.toISOString() : booking.createdAt,
+          updatedAt: booking.updatedAt instanceof Date ? booking.updatedAt.toISOString() : booking.updatedAt,
+          status: booking.status.toUpperCase(),
+          paymentStatus: booking.paymentStatus.toUpperCase()
+        };
+      });
     },
 
     checkAvailability: async (_: any, { propertyId, checkIn, checkOut }: { propertyId: string, checkIn: string, checkOut: string }) => {
-      const isAvailable = await BookingModel.checkAvailability(
-        new mongoose.Types.ObjectId(propertyId),
-        new Date(checkIn),
-        new Date(checkOut)
-      );
-      return isAvailable;
+      try {
+        const isAvailable = await BookingModel.checkAvailability(
+          new mongoose.Types.ObjectId(propertyId),
+          new Date(checkIn),
+          new Date(checkOut)
+        );
+        
+        return {
+          available: isAvailable,
+          message: isAvailable 
+            ? 'The property is available for the selected dates.' 
+            : 'The property is not available for the selected dates.'
+        };
+      } catch (error) {
+        console.error('Error checking availability:', error);
+        return {
+          available: false,
+          message: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+        };
+      }
     },
   },
 
@@ -328,12 +375,11 @@ export const bookingResolvers = {
     },
 
     updateBooking: async (_: any, { input }: { input: UpdateBookingInput }, context: Context) => {
-      const session = await getServerSession(authOptions);
-      if (!session?.user?.email) {
+      if (!context.session?.user?.email) {
         throw new GraphQLError('Not authenticated');
       }
 
-      const user = await UserModel.findOne({ email: session.user.email });
+      const user = await UserModel.findOne({ email: context.session.user.email });
       if (!user) {
         throw new GraphQLError('User not found');
       }
@@ -366,9 +412,21 @@ export const bookingResolvers = {
           }
         }
 
+        // Format the dates properly before updating
+        const updateData = { ...input };
+        
+        // Ensure dates are stored in ISO format
+        if (updateData.checkIn) {
+          updateData.checkIn = new Date(updateData.checkIn).toISOString();
+        }
+        
+        if (updateData.checkOut) {
+          updateData.checkOut = new Date(updateData.checkOut).toISOString();
+        }
+        
         const updatedBooking = await BookingModel.findByIdAndUpdate(
           input.bookingId,
-          { $set: input },
+          { $set: updateData },
           { new: true }
         )
         .populate<{ property: PopulatedProperty }>('property')
@@ -417,12 +475,11 @@ export const bookingResolvers = {
     },
 
     cancelBooking: async (_: any, { bookingId }: { bookingId: string }, context: Context) => {
-      const session = await getServerSession(authOptions);
-      if (!session?.user?.email) {
+      if (!context.session?.user?.email) {
         throw new GraphQLError('Not authenticated');
       }
 
-      const user = await UserModel.findOne({ email: session.user.email });
+      const user = await UserModel.findOne({ email: context.session.user.email });
       if (!user) {
         throw new GraphQLError('User not found');
       }
@@ -500,12 +557,11 @@ export const bookingResolvers = {
     },
 
     confirmBooking: async (_: any, { bookingId }: { bookingId: string }, context: Context) => {
-      const session = await getServerSession(authOptions);
-      if (!session?.user?.email) {
+      if (!context.session?.user?.email) {
         throw new GraphQLError('Not authenticated');
       }
 
-      const user = await UserModel.findOne({ email: session.user.email });
+      const user = await UserModel.findOne({ email: context.session.user.email });
       if (!user) {
         throw new GraphQLError('User not found');
       }
@@ -658,12 +714,11 @@ export const bookingResolvers = {
     },
 
     deleteBooking: async (_: any, { bookingId }: { bookingId: string }, context: Context) => {
-      const session = await getServerSession(authOptions);
-      if (!session?.user?.email) {
+      if (!context.session?.user?.email) {
         throw new GraphQLError('Not authenticated');
       }
 
-      const user = await UserModel.findOne({ email: session.user.email });
+      const user = await UserModel.findOne({ email: context.session.user.email });
       if (!user) {
         throw new GraphQLError('User not found');
       }

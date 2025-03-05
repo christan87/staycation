@@ -41,6 +41,11 @@ input UpdateBookingInput {
   paymentStatus: PaymentStatus
 }
 
+type AvailabilityResponse {
+  available: Boolean!
+  message: String
+}
+
 type BookingResponse {
   success: Boolean!
   message: String
@@ -58,7 +63,7 @@ type Query {
   propertyBookings(propertyId: ID!): [Booking!]!
   
   # Check if a property is available for given dates
-  checkAvailability(propertyId: ID!, checkIn: String!, checkOut: String!): Boolean!
+  checkAvailability(propertyId: ID!, checkIn: String!, checkOut: String!): AvailabilityResponse!
 }
 
 type Mutation {
