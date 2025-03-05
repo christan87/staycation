@@ -1,24 +1,11 @@
-'use client';
-
-/**
- * Registration Page
- * 
- * Handles user registration with:
- * - Form validation with password strength requirements
- * - Password confirmation
- * - GraphQL mutation
- * - Error handling
- * - Success redirection
- * - Social registration with Google and Facebook
- */
-
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { Container } from '@/components/Container';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { signIn } from 'next-auth/react';
+import Head from 'next/head';
 
 interface FormData {
   name: string;
@@ -192,17 +179,38 @@ export default function RegisterPage() {
     setErrors({});
 
     try {
-      const result = await signIn('credentials', {
-        name: formData.name,
+      // First register the user
+      const registerResponse = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const registerData = await registerResponse.json();
+
+      if (!registerResponse.ok) {
+        setErrors({
+          general: registerData.error || 'Registration failed',
+        });
+        return;
+      }
+
+      // If registration is successful, sign in the user
+      const signInResult = await signIn('credentials', {
         email: formData.email,
         password: formData.password,
-        isRegistering: 'true',
         redirect: false,
       });
 
-      if (result?.error) {
+      if (signInResult?.error) {
         setErrors({
-          general: result.error,
+          general: signInResult.error,
         });
         return;
       }
@@ -224,130 +232,136 @@ export default function RegisterPage() {
   };
 
   return (
-    <Container className="py-8">
-      <div className="max-w-md mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Create your account
-          </h1>
-          <p className="mt-2 text-gray-600">
-            Already have an account?{' '}
-            <Link href="/login" className="text-blue-600 hover:underline">
-              Log in
-            </Link>
-          </p>
-        </div>
+    <>
+      <Head>
+        <title>Register - Staycation</title>
+        <meta name="description" content="Create your Staycation account to start booking amazing properties" />
+      </Head>
+      <Container className="py-8">
+        <div className="max-w-md mx-auto">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-900">
+              Create your account
+            </h1>
+            <p className="mt-2 text-gray-600">
+              Already have an account?{' '}
+              <Link href="/login" className="text-blue-600 hover:underline">
+                Log in
+              </Link>
+            </p>
+          </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {errors.general && (
-            <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg">
-              {errors.general}
-            </div>
-          )}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {errors.general && (
+              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg">
+                {errors.general}
+              </div>
+            )}
 
-          <Input
-            label="Full Name"
-            type="text"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            error={getFieldError('name')}
-            touched={touched.name || attemptedSubmit}
-            disabled={isLoading}
-            required
-          />
-
-          <Input
-            label="Email Address"
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            error={getFieldError('email')}
-            touched={touched.email || attemptedSubmit}
-            disabled={isLoading}
-            required
-          />
-
-          <div className="space-y-4">
-            <PasswordStrengthIndicator passwordStrength={passwordStrength} />
             <Input
-              label="Password"
-              type="password"
-              name="password"
-              value={formData.password}
+              label="Full Name"
+              type="text"
+              name="name"
+              value={formData.name}
               onChange={handleChange}
               onBlur={handleBlur}
-              error={getFieldError('password')}
-              success={Boolean(touched.password && isPasswordStrong())}
-              touched={touched.password || attemptedSubmit}
+              error={getFieldError('name')}
+              touched={touched.name || attemptedSubmit}
               disabled={isLoading}
               required
             />
-          </div>
 
-          <Input
-            label="Confirm Password"
-            type="password"
-            name="confirmPassword"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            error={getFieldError('confirmPassword')}
-            success={Boolean(
-              (touched.confirmPassword || attemptedSubmit) &&
-              formData.confirmPassword &&
-              formData.password === formData.confirmPassword
-            )}
-            touched={touched.confirmPassword || attemptedSubmit}
-            disabled={isLoading}
-            required
-          />
-
-          <Button
-            type="submit"
-            variant="primary"
-            fullWidth
-            disabled={isLoading || !isFormValid()}
-          >
-            {isLoading ? 'Creating account...' : 'Create account'}
-          </Button>
-
-          <div className="mt-4 flex space-x-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+            <Input
+              label="Email Address"
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              error={getFieldError('email')}
+              touched={touched.email || attemptedSubmit}
               disabled={isLoading}
-              fullWidth
-            >
-              <img
-                className="w-5 h-5 mr-2"
-                src="/google.svg"
-                alt="Google logo"
+              required
+            />
+
+            <div className="space-y-4">
+              <PasswordStrengthIndicator passwordStrength={passwordStrength} />
+              <Input
+                label="Password"
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={getFieldError('password')}
+                success={Boolean(touched.password && isPasswordStrong())}
+                touched={touched.password || attemptedSubmit}
+                disabled={isLoading}
+                required
               />
-              Google
+            </div>
+
+            <Input
+              label="Confirm Password"
+              type="password"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              error={getFieldError('confirmPassword')}
+              success={Boolean(
+                (touched.confirmPassword || attemptedSubmit) &&
+                formData.confirmPassword &&
+                formData.password === formData.confirmPassword
+              )}
+              touched={touched.confirmPassword || attemptedSubmit}
+              disabled={isLoading}
+              required
+            />
+
+            <Button
+              type="submit"
+              variant="primary"
+              fullWidth
+              disabled={isLoading || !isFormValid()}
+            >
+              {isLoading ? 'Creating account...' : 'Create account'}
             </Button>
 
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => signIn('facebook', { callbackUrl: '/dashboard' })}
-              disabled={isLoading}
-              fullWidth
-            >
-              <img
-                className="w-5 h-5 mr-2"
-                src="/facebook.svg"
-                alt="Facebook logo"
-              />
-              Facebook
-            </Button>
-          </div>
-        </form>
-      </div>
-    </Container>
+            <div className="mt-4 flex space-x-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+                disabled={isLoading}
+                fullWidth
+              >
+                <img
+                  className="w-5 h-5 mr-2"
+                  src="/google.svg"
+                  alt="Google logo"
+                />
+                Google
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => signIn('facebook', { callbackUrl: '/dashboard' })}
+                disabled={isLoading}
+                fullWidth
+              >
+                <img
+                  className="w-5 h-5 mr-2"
+                  src="/facebook.svg"
+                  alt="Facebook logo"
+                />
+                Facebook
+              </Button>
+            </div>
+          </form>
+        </div>
+      </Container>
+    </>
   );
 }

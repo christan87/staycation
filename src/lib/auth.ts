@@ -20,9 +20,7 @@ export const authOptions: NextAuthOptions = {
       name: 'Credentials',
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-        name: { label: "Name", type: "text" },
-        isRegistering: { label: "Is Registering", type: "boolean" }
+        password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -31,49 +29,22 @@ export const authOptions: NextAuthOptions = {
 
         await dbConnect();
 
-        if (credentials.isRegistering === 'true') {
-          if (!credentials.name) {
-            throw new Error('Please enter a name');
-          }
-
-          const existingUser = await User.findOne({ email: credentials.email });
-          if (existingUser) {
-            throw new Error('User already exists');
-          }
-
-          const hashedPassword = await bcrypt.hash(credentials.password, 12);
-
-          const user = await User.create({
-            name: credentials.name,
-            email: credentials.email,
-            password: hashedPassword,
-            role: 'GUEST', // Use GUEST as the database role
-          });
-
-          return {
-            id: user._id.toString(),
-            name: user.name,
-            email: user.email,
-            role: user.role,
-          };
-        } else {
-          const user = await User.findOne({ email: credentials.email });
-          if (!user) {
-            throw new Error('No user found');
-          }
-
-          const isValid = await bcrypt.compare(credentials.password, user.password);
-          if (!isValid) {
-            throw new Error('Invalid password');
-          }
-
-          return {
-            id: user._id.toString(),
-            name: user.name,
-            email: user.email,
-            role: user.role,
-          };
+        const user = await User.findOne({ email: credentials.email });
+        if (!user) {
+          throw new Error('No user found');
         }
+
+        const isValid = await bcrypt.compare(credentials.password, user.password);
+        if (!isValid) {
+          throw new Error('Invalid password');
+        }
+
+        return {
+          id: user._id.toString(),
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        };
       },
     }),
   ],
