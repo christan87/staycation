@@ -1,18 +1,14 @@
 [build]
-  command = "npm run build"
+  command = "npm run netlify-build"
   publish = ".next"
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF ./"
 
 [build.environment]
-  NEXT_USE_NETLIFY_EDGE = "true"
   NODE_VERSION = "18.20.6"
   NPM_VERSION = "10.8.2"
 
-[[redirects]]
-  from = "/_next/static/*"
-  to = "/static/:splat"
-  status = 200
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+[functions]
+  node_bundler = "esbuild"
