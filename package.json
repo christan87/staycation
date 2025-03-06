@@ -5,11 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "postbuild": "node netlify-postbuild.js",
     "start": "next start",
     "lint": "next lint",
-    "netlify-build": "NODE_ENV=production next build && node netlify-postbuild.js && cp -r public/* .next/",
-    "netlify-deploy": "./netlify-build.sh",
     "postinstall": "next telemetry disable"
   },
   "dependencies": {
@@ -44,7 +41,7 @@
   },
   "devDependencies": {
     "@babel/plugin-transform-runtime": "^7.26.9",
-    "@netlify/plugin-nextjs": "^4.41.3",
+    "@netlify/plugin-nextjs": "4.41.3",
     "@testing-library/jest-dom": "^6.6.3",
     "@types/bcryptjs": "^2.4.6",
     "@types/jest": "^29.5.14",

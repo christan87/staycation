@@ -1,16 +1,16 @@
 [build]
-  command = "./netlify-build.sh"
+  command = "npm run build"
   publish = ".next"
 
 [build.environment]
   NODE_VERSION = "18.20.6"
   NPM_VERSION = "10.8.2"
-  NETLIFY_NEXT_PLUGIN_SKIP = "true"
-  # We'll handle NODE_ENV in our build script, not here
+  NEXT_PRIVATE_STANDALONE = "true"
 
 [functions]
   node_bundler = "esbuild"
-  included_files = ["node_modules/**"]
+  included_files = ["node_modules/**", ".next/**"]
+  external_node_modules = ["@next/font", "next"]
 
 [[headers]]
   for = "/*"
@@ -19,9 +19,18 @@
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
 
-# Handle SPA routing
+# Use Netlify's built-in handling for Next.js
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Handle API routes and server-side rendering
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/netlify"
+  status = 200
+
+# Handle all other routes
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to = "/.netlify/functions/netlify"
   status = 200
-  force = true

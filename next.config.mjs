@@ -3,14 +3,17 @@ const nextConfig = {
   // Core Next.js configuration
   reactStrictMode: true,
   swcMinify: true,
-  output: 'export', // Static export for Netlify
+  // Use standalone output for Netlify
+  output: 'standalone',
   distDir: '.next',
+  // Image configuration
   images: {
-    unoptimized: true, // Required for static export
     domains: ['res.cloudinary.com', 'localhost'],
   },
-  // Ensure trailing slashes for better compatibility
-  trailingSlash: true,
+  // Enable server actions for form submissions
+  experimental: {
+    serverActions: true,
+  },
 };
 
 export default nextConfig;
