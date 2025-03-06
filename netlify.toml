@@ -1,17 +1,11 @@
 [build]
-  command = "./netlify-build.sh"
+  command = "npm install && npm install --save-dev typescript@5.8.2 @types/node @types/react @types/react-dom && npm run netlify-build"
   publish = ".next"
-  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF ./"
 
 [build.environment]
   NODE_VERSION = "18.20.6"
   NPM_VERSION = "10.8.2"
   NETLIFY_NEXT_PLUGIN_SKIP = "true"
-  NODE_ENV = "production"
-
-# Completely remove the plugin to avoid conflicts
-# [[plugins]]
-#   package = "@netlify/plugin-nextjs"
 
 [functions]
   node_bundler = "esbuild"

@@ -5,9 +5,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "node netlify-postbuild.js",
     "start": "next start",
     "lint": "next lint",
-    "netlify-build": "next build",
+    "netlify-build": "next build && node netlify-postbuild.js",
     "postinstall": "next telemetry disable"
   },
   "dependencies": {
@@ -45,9 +46,9 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@types/bcryptjs": "^2.4.6",
     "@types/jest": "^29.5.14",
-    "@types/node": "20.11.17",
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
+    "@types/node": "^22.13.9",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
     "autoprefixer": "^10.4.20",
@@ -58,6 +59,6 @@
     "mini-css-extract-plugin": "^2.9.2",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.3.2",
-    "typescript": "5.8.2"
+    "typescript": "^5.8.2"
   }
 }
