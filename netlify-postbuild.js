@@ -2,6 +2,19 @@
 const fs = require('fs');
 const path = require('path');
 
+// Copy _redirects file from public to .next directory
+const publicRedirectsPath = path.join(__dirname, 'public', '_redirects');
+const nextRedirectsPath = path.join(__dirname, '.next', '_redirects');
+
+if (fs.existsSync(publicRedirectsPath)) {
+  fs.copyFileSync(publicRedirectsPath, nextRedirectsPath);
+  console.log(`Copied _redirects file to: ${nextRedirectsPath}`);
+} else {
+  // Create _redirects file if it doesn't exist
+  fs.writeFileSync(nextRedirectsPath, '/* /index.html 200');
+  console.log(`Created _redirects file at: ${nextRedirectsPath}`);
+}
+
 // Paths to check and create if missing
 const paths = [
   '.next/server/chunks/vendor-chunks/next.js',

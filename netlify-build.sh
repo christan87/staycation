@@ -67,6 +67,16 @@ fi
 echo "🔍 Running post-build script..."
 node netlify-postbuild.js
 
+# Copy public files to .next directory
+echo "📂 Copying public files to .next directory..."
+cp -r public/* .next/
+
+# Ensure _redirects file exists in .next directory
+if [ ! -f ".next/_redirects" ]; then
+  echo "⚠️ Creating _redirects file in .next directory..."
+  echo "/* /index.html 200" > .next/_redirects
+fi
+
 # Verify critical files exist
 echo "✅ Verifying build output..."
 if [ ! -f ".next/server/pages-manifest.json" ]; then
