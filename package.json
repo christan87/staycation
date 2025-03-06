@@ -8,10 +8,12 @@
     "postbuild": "node netlify-postbuild.js",
     "start": "next start",
     "lint": "next lint",
-    "netlify-build": "next build && node netlify-postbuild.js",
+    "netlify-build": "NODE_ENV=production next build && node netlify-postbuild.js",
+    "netlify-deploy": "./netlify-build.sh",
     "postinstall": "next telemetry disable"
   },
   "dependencies": {
+    "critters": "^0.0.20",
     "@apollo/client": "^3.13.1",
     "@auth/mongodb-adapter": "^3.7.4",
     "@graphql-tools/load-files": "^7.0.1",
