@@ -4,6 +4,20 @@ const path = require('path');
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+  // Disable static HTML export
+  output: 'standalone',
+  // Configure pages and document handling
+  pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
+  // Disable static optimization for pages that use getServerSideProps
+  experimental: {
+    // This prevents issues with the Html component in static pages
+    optimizeCss: false,
+    serverActions: true,
+    // Explicitly disable static page optimization
+    disableOptimizedLoading: true,
+    // Ensure proper component resolution
+    esmExternals: true
+  },
   webpack: (config, { dev, isServer }) => {
     // Only run in production and when not running on the server
     if (!dev && !isServer) {
@@ -20,17 +34,13 @@ const nextConfig = {
     unoptimized: true,
     domains: ['res.cloudinary.com', 'localhost'],
   },
-  output: 'standalone',
   typescript: {
     ignoreBuildErrors: true,
   },
   eslint: {
     ignoreDuringBuilds: true,
   },
-  experimental: {
-    serverActions: true
-  },
-  pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
+  poweredByHeader: false,
 };
 
 module.exports = nextConfig;

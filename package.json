@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "netlify-build": "next build"
+    "netlify-build": "next build",
+    "postinstall": "next telemetry disable"
   },
   "dependencies": {
     "@apollo/client": "^3.13.1",
