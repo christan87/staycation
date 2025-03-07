@@ -1,16 +1,13 @@
 [build]
   command = "npm run build"
-  publish = ".next"
+  publish = "out"
 
 [build.environment]
   NODE_VERSION = "18.20.6"
   NPM_VERSION = "10.8.2"
-  NEXT_PRIVATE_STANDALONE = "true"
+  NETLIFY_NEXT_PLUGIN_SKIP = "true"
 
-[functions]
-  node_bundler = "esbuild"
-  included_files = ["node_modules/**", ".next/**"]
-  external_node_modules = ["@next/font", "next"]
+# Remove functions section as we're using static export
 
 [[headers]]
   for = "/*"
@@ -19,18 +16,8 @@
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
 
-# Use Netlify's built-in handling for Next.js
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
-
-# Handle API routes and server-side rendering
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/netlify"
-  status = 200
-
-# Handle all other routes
+# Handle client-side routing for SPA
 [[redirects]]
   from = "/*"
-  to = "/.netlify/functions/netlify"
+  to = "/index.html"
   status = 200

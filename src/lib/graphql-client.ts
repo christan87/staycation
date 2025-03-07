@@ -3,8 +3,14 @@ import { setContext } from '@apollo/client/link/context';
 import { onError } from '@apollo/client/link/error';
 import { getSession } from 'next-auth/react';
 
+// Determine the GraphQL endpoint based on environment
+const isProduction = process.env.NODE_ENV === 'production';
+const graphqlEndpoint = isProduction 
+  ? '/.netlify/functions/graphql'
+  : '/api/graphql';
+
 const httpLink = createHttpLink({
-  uri: '/api/graphql',
+  uri: graphqlEndpoint,
   credentials: 'same-origin',
 });
 
